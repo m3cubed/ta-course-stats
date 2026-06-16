@@ -235,6 +235,66 @@ body.has-comparison .compare-button {
   width: 1px;
 }
 
+.label-controls {
+  background: var(--surface);
+  border-top: 1px solid var(--rule);
+  display: none;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.has-data .label-controls {
+  display: grid;
+}
+
+.label-field {
+  align-items: center;
+  border-right: 1px solid var(--rule);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+  padding: 9px 18px;
+}
+
+.label-field:last-child {
+  border-right: 0;
+}
+
+.compare-label-field {
+  display: none;
+}
+
+body.has-comparison .compare-label-field {
+  display: grid;
+}
+
+.label-field span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.label-field input {
+  background: var(--surface);
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.label-field input:focus {
+  border-color: var(--accent);
+  outline: 0;
+}
+
 .layout {
   display: grid;
   gap: 14px;
@@ -567,6 +627,30 @@ body.has-comparison .compare-button {
   padding: 22px;
 }
 
+.paired-section {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.paired-panel {
+  align-content: start;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.paired-panel-title {
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  padding-bottom: 8px;
+  text-transform: uppercase;
+}
+
 .insight-grid {
   display: grid;
   gap: 10px;
@@ -733,7 +817,18 @@ tbody tr:hover td {
 }
 
 .number-cell {
+  hyphens: none;
+  overflow-wrap: normal;
   text-align: right;
+  word-break: normal;
+}
+
+th.number-cell {
+  white-space: normal;
+}
+
+td.number-cell {
+  white-space: nowrap;
 }
 
 .course-table-link {
@@ -998,6 +1093,11 @@ body.drag-active .drop-overlay {
     position: sticky;
     top: 89px;
   }
+
+  body.has-data .sidebar {
+    height: calc(100vh - 139px);
+    top: 139px;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -1020,6 +1120,19 @@ body.drag-active .drop-overlay {
   .file-controls {
     border-left: 0;
     border-top: 1px solid var(--rule);
+  }
+
+  .label-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .label-field {
+    border-bottom: 1px solid var(--rule);
+    border-right: 0;
+  }
+
+  .label-field:last-child {
+    border-bottom: 0;
   }
 
   .layout {
@@ -1055,6 +1168,10 @@ body.drag-active .drop-overlay {
   .section-title {
     border-bottom: 1px solid var(--rule);
     border-right: 0;
+  }
+
+  .paired-section {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1103,6 +1220,10 @@ body.drag-active .drop-overlay {
 
   .file-button {
     min-height: 48px;
+  }
+
+  .label-field {
+    grid-template-columns: 1fr;
   }
 
   .empty-state {

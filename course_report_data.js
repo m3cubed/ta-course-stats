@@ -256,12 +256,12 @@ function overviewNavStatText(comparison) {
 
 function overviewSubtitle(courses, aggregate, sectionTotal) {
   const meta = `${courses.length} courses / ${aggregate.count} students${sectionTotal ? ` / ${sectionTotal} sections` : ""}`;
-  if (!hasComparison()) return `${meta} in ${state.fileName}`;
-  return `${meta} combined from ${state.fileName} and ${state.compareFileName}`;
+  if (!hasComparison()) return `${meta} in ${fileLabelForSource("base")}`;
+  return `${meta} combined from ${fileLabelForSource("base")} and ${fileLabelForSource("compare")}`;
 }
 
 function comparisonOverviewSubtitle(summary) {
-  return `${state.fileName}: ${fileSetMetaText(summary.base)} / ${state.compareFileName}: ${fileSetMetaText(summary.next)}`;
+  return `${fileLabelForSource("base")}: ${fileSetMetaText(summary.base)} / ${fileLabelForSource("compare")}: ${fileSetMetaText(summary.next)}`;
 }
 
 function fileSetMetaText(aggregate) {
@@ -274,7 +274,7 @@ function courseMetaText(course) {
 
 function coursePageSubtitle(course, source, compareCourse) {
   if (!hasComparison()) return courseMetaText(course);
-  if (compareCourse) return `${courseMetaText(course)} / matched with ${state.compareFileName}`;
+  if (compareCourse) return `${courseMetaText(course)} / matched with ${fileLabelForSource("compare")}`;
   return `${courseMetaText(course)} / only in ${fileNameForSource(source)}`;
 }
 
@@ -291,8 +291,8 @@ function courseNavStatText(course, compareCourse) {
 
 function fileStatusText() {
   if (!state.fileName) return "No file loaded";
-  if (!state.compareFileName) return state.fileName;
-  return `${state.fileName} vs ${state.compareFileName}`;
+  if (!state.compareFileName) return fileLabelForSource("base");
+  return `${fileLabelForSource("base")} vs ${fileLabelForSource("compare")}`;
 }
 
 function hasComparison() {
@@ -404,10 +404,18 @@ function comparisonSummary() {
 
 function comparisonStatus(pair) {
   if (pair.base && pair.next) return "Matched";
-  if (pair.base) return `Only in ${state.fileName}`;
-  return `Only in ${state.compareFileName}`;
+  if (pair.base) return `Only in ${fileLabelForSource("base")}`;
+  return `Only in ${fileLabelForSource("compare")}`;
 }
 
 function fileNameForSource(source) {
-  return source === "compare" ? state.compareFileName : state.fileName;
+  return fileLabelForSource(source);
+}
+
+function fileLabelForSource(source) {
+  if (source === "compare") {
+    return state.compareFileLabel || defaultFileLabel(state.compareFileName, "Second file");
+  }
+
+  return state.fileLabel || defaultFileLabel(state.fileName, "First file");
 }

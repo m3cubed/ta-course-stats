@@ -52,7 +52,7 @@ function formatPercent(value) {
 
 function formatRange(min, max) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return "";
-  return `${formatGrade(min)}-${formatGrade(max)}`;
+  return `${formatGrade(min)} - ${formatGrade(max)}`;
 }
 
 function formatSignedCount(value) {
@@ -84,6 +84,15 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return slug || "course";
+}
+
+function defaultFileLabel(fileName, fallback) {
+  const label = String(fileName || "")
+    .replace(/\.[^.]+$/, "")
+    .replace(/^course-results[-_]?/i, "")
+    .trim();
+
+  return label || fallback;
 }
 
 function el(tagName, options, children) {

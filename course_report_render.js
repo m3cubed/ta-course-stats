@@ -4,6 +4,7 @@ function render() {
   fileStatus.textContent = fileStatusText();
   document.body.classList.toggle("has-data", state.courses.length > 0);
   document.body.classList.toggle("has-comparison", hasComparison());
+  renderLabelControls();
   renderCourseNav();
 
   if (!state.courses.length) {
@@ -32,6 +33,29 @@ function render() {
   }
 
   renderOverview();
+}
+
+function renderLabelControls() {
+  const hasData = state.courses.length > 0;
+  if (labelControls) {
+    labelControls.setAttribute("aria-hidden", hasData ? "false" : "true");
+  }
+
+  if (fileLabelInput) {
+    fileLabelInput.placeholder = "First file label";
+    fileLabelInput.title = state.fileName || "";
+    if (document.activeElement !== fileLabelInput) {
+      fileLabelInput.value = state.fileLabel || "";
+    }
+  }
+
+  if (compareFileLabelInput) {
+    compareFileLabelInput.placeholder = "Second file label";
+    compareFileLabelInput.title = state.compareFileName || "";
+    if (document.activeElement !== compareFileLabelInput) {
+      compareFileLabelInput.value = state.compareFileLabel || "";
+    }
+  }
 }
 
 function renderCourseNav() {
@@ -203,24 +227,26 @@ function renderOverview() {
 
 function renderComparisonOverview() {
   const summary = comparisonSummary();
+  const firstLabel = fileLabelForSource("base");
+  const secondLabel = fileLabelForSource("compare");
   const metrics = [
-    metric(`${state.fileName} courses`, summary.base.courseCount),
-    metric(`${state.compareFileName} courses`, summary.next.courseCount),
+    metric(`${firstLabel} courses`, summary.base.courseCount),
+    metric(`${secondLabel} courses`, summary.next.courseCount),
     metric("Course delta", formatSignedCount(summary.next.courseCount - summary.base.courseCount)),
-    metric(`${state.fileName} students`, summary.base.stats.count),
-    metric(`${state.compareFileName} students`, summary.next.stats.count),
+    metric(`${firstLabel} students`, summary.base.stats.count),
+    metric(`${secondLabel} students`, summary.next.stats.count),
     metric("Student delta", formatSignedCount(summary.studentDelta)),
-    metric(`${state.fileName} sections`, summary.base.sectionCount),
-    metric(`${state.compareFileName} sections`, summary.next.sectionCount),
+    metric(`${firstLabel} sections`, summary.base.sectionCount),
+    metric(`${secondLabel} sections`, summary.next.sectionCount),
     metric("Section delta", formatSignedCount(summary.sectionDelta)),
-    metric(`${state.fileName} average`, formatGrade(summary.base.stats.average)),
-    metric(`${state.compareFileName} average`, formatGrade(summary.next.stats.average)),
+    metric(`${firstLabel} average`, formatGrade(summary.base.stats.average)),
+    metric(`${secondLabel} average`, formatGrade(summary.next.stats.average)),
     metric("Average delta", formatSignedGrade(summary.averageDelta)),
-    metric(`${state.fileName} median`, formatGrade(summary.base.stats.median)),
-    metric(`${state.compareFileName} median`, formatGrade(summary.next.stats.median)),
+    metric(`${firstLabel} median`, formatGrade(summary.base.stats.median)),
+    metric(`${secondLabel} median`, formatGrade(summary.next.stats.median)),
     metric("Median delta", formatSignedGrade(summary.medianDelta)),
-    metric(`${state.fileName} IQR`, formatGrade(summary.base.stats.iqr)),
-    metric(`${state.compareFileName} IQR`, formatGrade(summary.next.stats.iqr)),
+    metric(`${firstLabel} IQR`, formatGrade(summary.base.stats.iqr)),
+    metric(`${secondLabel} IQR`, formatGrade(summary.next.stats.iqr)),
     metric("IQR delta", formatSignedGrade(summary.iqrDelta)),
     metric("Under 50% delta", formatSignedCount(summary.riskCountDelta)),
     metric("80%+ delta", formatSignedCount(summary.distinctionCountDelta)),
@@ -231,22 +257,39 @@ function renderComparisonOverview() {
       pageHead("Comparison", comparisonOverviewSubtitle(summary), "C"),
       el("div", { className: "comparison-metrics" }, metrics),
       section("Course Deltas", renderComparisonTable(comparisonPairs())),
-      section(`${state.fileName} Grade Bands`, renderBands(summary.base.stats.bands, summary.base.stats.count)),
-      section(`${state.compareFileName} Grade Bands`, renderBands(summary.next.stats.bands, summary.next.stats.count)),
+      pairedSection(
+        "Distributions",
+        firstLabel,
+        renderDistributionChart({
+          name: firstLabel,
+          grades: state.courses.flatMap((course) => course.grades),
+          stats: summary.base.stats,
+        }),
+        secondLabel,
+        renderDistributionChart({
+          name: secondLabel,
+          grades: state.compareCourses.flatMap((course) => course.grades),
+          stats: summary.next.stats,
+        }),
+      ),
+      pairedSection(
+        "Grade Bands",
+        firstLabel,
+        renderBands(summary.base.stats.bands, summary.base.stats.count),
+        secondLabel,
+        renderBands(summary.next.stats.bands, summary.next.stats.count),
+      ),
       section("Grade Band Shifts", renderBandComparison(summary.base.stats, summary.next.stats)),
-      section(`${state.fileName} Percentiles`, renderPercentileTable(summary.base.stats)),
-      section(`${state.compareFileName} Percentiles`, renderPercentileTable(summary.next.stats)),
+      section(`${firstLabel} Percentiles`, renderPercentileTable(summary.base.stats)),
+      section(`${secondLabel} Percentiles`, renderPercentileTable(summary.next.stats)),
       section("Percentile Shifts", renderPercentileComparison(summary.base.stats, summary.next.stats)),
-      section(`${state.fileName} Distribution`, renderDistributionChart({
-        name: state.fileName,
-        grades: state.courses.flatMap((course) => course.grades),
-        stats: summary.base.stats,
-      })),
-      section(`${state.compareFileName} Distribution`, renderDistributionChart({
-        name: state.compareFileName,
-        grades: state.compareCourses.flatMap((course) => course.grades),
-        stats: summary.next.stats,
-      })),
+      pairedSection(
+        "Grades",
+        firstLabel,
+        renderGradeStrip(state.courses.flatMap((course) => course.grades)),
+        secondLabel,
+        renderGradeStrip(state.compareCourses.flatMap((course) => course.grades)),
+      ),
     ]),
   );
 }
@@ -258,6 +301,13 @@ function renderComparison() {
 function renderCourse(course, source = "base") {
   const stats = course.stats;
   const compareCourse = source === "base" ? findCompareCourse(course.name) : null;
+  const currentFileName = hasComparison() ? fileNameForSource(source) : "";
+  const firstLabel = fileLabelForSource("base");
+  const secondLabel = fileLabelForSource("compare");
+  const distributionTitle = currentFileName ? `${currentFileName} Distribution` : "Distribution";
+  const gradeBandsTitle = currentFileName ? `${currentFileName} Grade Bands` : "Grade Bands";
+  const percentilesTitle = currentFileName ? `${currentFileName} Percentiles` : "Percentiles";
+  const gradesTitle = currentFileName ? `${currentFileName} Grades` : "Grades";
   const metrics = [
     metric("Students", stats.count),
     course.sectionCount ? metric("Sections", course.sectionCount) : null,
@@ -279,10 +329,29 @@ function renderCourse(course, source = "base") {
       pageHead(course.name, coursePageSubtitle(course, source, compareCourse), courseMarker(course, source)),
       metricGrid(metrics),
       hasComparison() ? section("Comparison", compareCourse ? renderCourseComparison(course, compareCourse) : renderNoComparison(course, source)) : null,
-      section("Distribution", renderDistributionChart(course)),
-      section("Grade Bands", renderBands(stats.bands, stats.count)),
-      section("Percentiles", renderPercentileTable(stats)),
-      section("Grades", renderGradeStrip(course.grades)),
+      compareCourse
+        ? pairedSection(
+          "Distributions",
+          firstLabel,
+          renderDistributionChart(course),
+          secondLabel,
+          renderDistributionChart(compareCourse),
+        )
+        : section(distributionTitle, renderDistributionChart(course)),
+      compareCourse
+        ? pairedSection(
+          "Grade Bands",
+          firstLabel,
+          renderBands(stats.bands, stats.count),
+          secondLabel,
+          renderBands(compareCourse.stats.bands, compareCourse.stats.count),
+        )
+        : section(gradeBandsTitle, renderBands(stats.bands, stats.count)),
+      section(percentilesTitle, renderPercentileTable(stats)),
+      compareCourse ? section(`${secondLabel} Percentiles`, renderPercentileTable(compareCourse.stats)) : null,
+      compareCourse ? section("Percentile Shifts", renderPercentileComparison(stats, compareCourse.stats)) : null,
+      section(gradesTitle, renderGradeStrip(course.grades)),
+      compareCourse ? section(`${secondLabel} Grades`, renderGradeStrip(compareCourse.grades)) : null,
     ].filter((item) => item)),
   );
 }
@@ -318,6 +387,20 @@ function section(title, body) {
   return el("section", { className: "section" }, [
     el("div", { className: "section-title", text: title }),
     el("div", { className: "section-body" }, [body]),
+  ]);
+}
+
+function pairedSection(title, firstTitle, firstBody, secondTitle, secondBody) {
+  return section(title, el("div", { className: "paired-section" }, [
+    pairedPanel(firstTitle, firstBody),
+    pairedPanel(secondTitle, secondBody),
+  ]));
+}
+
+function pairedPanel(title, body) {
+  return el("div", { className: "paired-panel" }, [
+    el("div", { className: "paired-panel-title", text: title }),
+    body,
   ]);
 }
 
@@ -369,6 +452,8 @@ function renderOverviewTable(courses) {
 }
 
 function renderComparisonTable(pairs) {
+  const firstLabel = fileLabelForSource("base");
+  const secondLabel = fileLabelForSource("compare");
   const rows = pairs.map((pair) => {
     const base = pair.base;
     const next = pair.next;
@@ -403,14 +488,14 @@ function renderComparisonTable(pairs) {
         el("tr", {}, [
           el("th", { text: "Course" }),
           el("th", { text: "Status" }),
-          el("th", { className: "number-cell", text: `${state.fileName} students` }),
-          el("th", { className: "number-cell", text: `${state.compareFileName} students` }),
+          el("th", { className: "number-cell", text: `${firstLabel} students` }),
+          el("th", { className: "number-cell", text: `${secondLabel} students` }),
           el("th", { className: "number-cell", text: "Student delta" }),
-          el("th", { className: "number-cell", text: `${state.fileName} sections` }),
-          el("th", { className: "number-cell", text: `${state.compareFileName} sections` }),
+          el("th", { className: "number-cell", text: `${firstLabel} sections` }),
+          el("th", { className: "number-cell", text: `${secondLabel} sections` }),
           el("th", { className: "number-cell", text: "Section delta" }),
-          el("th", { className: "number-cell", text: `${state.fileName} avg.` }),
-          el("th", { className: "number-cell", text: `${state.compareFileName} avg.` }),
+          el("th", { className: "number-cell", text: `${firstLabel} avg.` }),
+          el("th", { className: "number-cell", text: `${secondLabel} avg.` }),
           el("th", { className: "number-cell", text: "Avg. delta" }),
           el("th", { className: "number-cell", text: "Median delta" }),
           el("th", { className: "number-cell", text: "IQR delta" }),
@@ -424,6 +509,8 @@ function renderComparisonTable(pairs) {
 }
 
 function renderCourseComparison(base, next) {
+  const firstLabel = fileLabelForSource("base");
+  const secondLabel = fileLabelForSource("compare");
   const rows = [
     ["Students", base.stats.count, next.stats.count, formatSignedCount],
     ["Sections", base.sectionCount, next.sectionCount, formatSignedCount],
@@ -440,8 +527,8 @@ function renderCourseComparison(base, next) {
         el("thead", {}, [
           el("tr", {}, [
             el("th", { text: "Metric" }),
-            el("th", { className: "number-cell", text: state.fileName }),
-            el("th", { className: "number-cell", text: state.compareFileName }),
+            el("th", { className: "number-cell", text: firstLabel }),
+            el("th", { className: "number-cell", text: secondLabel }),
             el("th", { className: "number-cell", text: "Delta" }),
           ]),
         ]),
@@ -456,13 +543,12 @@ function renderCourseComparison(base, next) {
       ]),
     ]),
     renderBandComparison(base.stats, next.stats),
-    renderPercentileComparison(base.stats, next.stats),
   ]);
 }
 
 function renderNoComparison(course, source) {
-  const currentFileName = source === "compare" ? state.compareFileName : state.fileName;
-  const otherFileName = source === "compare" ? state.fileName : state.compareFileName;
+  const currentFileName = fileLabelForSource(source);
+  const otherFileName = source === "compare" ? fileLabelForSource("base") : fileLabelForSource("compare");
 
   return el("div", { className: "comparison-note" }, [
     el("div", { className: "comparison-note-title", text: `Only in ${currentFileName}` }),
@@ -473,6 +559,8 @@ function renderNoComparison(course, source) {
 }
 
 function renderBandComparison(baseStats, nextStats) {
+  const firstLabel = fileLabelForSource("base");
+  const secondLabel = fileLabelForSource("compare");
   const nextBands = new Map(nextStats.bands.map((band) => [band.label, band]));
   const rows = baseStats.bands.map((baseBand) => {
     const nextBand = nextBands.get(baseBand.label);
@@ -492,11 +580,11 @@ function renderBandComparison(baseStats, nextStats) {
       el("thead", {}, [
         el("tr", {}, [
           el("th", { text: "Band" }),
-          el("th", { className: "number-cell", text: `${state.fileName} count` }),
-          el("th", { className: "number-cell", text: `${state.compareFileName} count` }),
+          el("th", { className: "number-cell", text: `${firstLabel} count` }),
+          el("th", { className: "number-cell", text: `${secondLabel} count` }),
           el("th", { className: "number-cell", text: "Count delta" }),
-          el("th", { className: "number-cell", text: `${state.fileName} percent` }),
-          el("th", { className: "number-cell", text: `${state.compareFileName} percent` }),
+          el("th", { className: "number-cell", text: `${firstLabel} percent` }),
+          el("th", { className: "number-cell", text: `${secondLabel} percent` }),
           el("th", { className: "number-cell", text: "Percent delta" }),
         ]),
       ]),
@@ -506,6 +594,8 @@ function renderBandComparison(baseStats, nextStats) {
 }
 
 function renderPercentileComparison(baseStats, nextStats) {
+  const firstLabel = fileLabelForSource("base");
+  const secondLabel = fileLabelForSource("compare");
   const rows = [
     ["P10", "p10"],
     ["Q1", "q1"],
@@ -527,8 +617,8 @@ function renderPercentileComparison(baseStats, nextStats) {
       el("thead", {}, [
           el("tr", {}, [
             el("th", { text: "Percentile" }),
-            el("th", { className: "number-cell", text: state.fileName }),
-            el("th", { className: "number-cell", text: state.compareFileName }),
+            el("th", { className: "number-cell", text: firstLabel }),
+            el("th", { className: "number-cell", text: secondLabel }),
             el("th", { className: "number-cell", text: "Delta" }),
           ]),
       ]),

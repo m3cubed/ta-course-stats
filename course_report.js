@@ -3,6 +3,12 @@
 fileInput.addEventListener("change", handleFileChange);
 compareFileInput.addEventListener("change", handleCompareFileChange);
 clearButton.addEventListener("click", clearReport);
+if (fileLabelInput) {
+  fileLabelInput.addEventListener("input", handleFileLabelChange);
+}
+if (compareFileLabelInput) {
+  compareFileLabelInput.addEventListener("input", handleCompareFileLabelChange);
+}
 document.addEventListener("dragenter", handleDragEnter);
 document.addEventListener("dragover", handleDragOver);
 document.addEventListener("dragleave", handleDragLeave);
@@ -32,6 +38,18 @@ function handleCompareFileChange(event) {
   event.target.value = "";
 }
 
+function handleFileLabelChange(event) {
+  state.fileLabel = event.target.value.trim();
+  saveStoredData();
+  render();
+}
+
+function handleCompareFileLabelChange(event) {
+  state.compareFileLabel = event.target.value.trim();
+  saveStoredData();
+  render();
+}
+
 function clearReport() {
   clearData();
   fileInput.value = "";
@@ -50,10 +68,12 @@ function loadJsonFile(file, target) {
     .then(({ raw, courses }) => {
       if (target === "compare") {
         state.compareFileName = file.name;
+        state.compareFileLabel = defaultFileLabel(file.name, "Second file");
         state.compareRaw = raw;
         state.compareCourses = courses;
       } else {
         state.fileName = file.name;
+        state.fileLabel = defaultFileLabel(file.name, "First file");
         state.raw = raw;
         state.courses = courses;
       }
@@ -77,9 +97,11 @@ function loadDroppedPair(baseFile, compareFile) {
   Promise.all([readCourseFile(baseFile), readCourseFile(compareFile)])
     .then(([baseData, compareData]) => {
       state.fileName = baseFile.name;
+      state.fileLabel = defaultFileLabel(baseFile.name, "First file");
       state.raw = baseData.raw;
       state.courses = baseData.courses;
       state.compareFileName = compareFile.name;
+      state.compareFileLabel = defaultFileLabel(compareFile.name, "Second file");
       state.compareRaw = compareData.raw;
       state.compareCourses = compareData.courses;
       saveStoredData();
@@ -187,8 +209,10 @@ function saveStoredData() {
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
       fileName: state.fileName,
+      fileLabel: state.fileLabel,
       raw: state.raw,
       compareFileName: state.compareFileName,
+      compareFileLabel: state.compareFileLabel,
       compareRaw: state.compareRaw,
     }));
   } catch (error) {
@@ -201,9 +225,13 @@ function loadStoredData() {
     const stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
     if (!stored || !stored.raw) return;
     state.fileName = stored.fileName || "";
+    state.fileLabel = typeof stored.fileLabel === "string" ? stored.fileLabel : defaultFileLabel(stored.fileName, "First file");
     state.raw = stored.raw;
     state.courses = normalizeCourses(stored.raw);
     state.compareFileName = stored.compareFileName || "";
+    state.compareFileLabel = typeof stored.compareFileLabel === "string"
+      ? stored.compareFileLabel
+      : (stored.compareFileName ? defaultFileLabel(stored.compareFileName, "Second file") : "");
     state.compareRaw = stored.compareRaw || null;
     state.compareCourses = stored.compareRaw ? normalizeCourses(stored.compareRaw) : [];
   } catch (error) {
@@ -213,6 +241,7 @@ function loadStoredData() {
 
 function clearData() {
   state.fileName = "";
+  state.fileLabel = "";
   state.raw = null;
   state.courses = [];
   clearCompareData();
@@ -225,6 +254,7 @@ function clearData() {
 
 function clearCompareData() {
   state.compareFileName = "";
+  state.compareFileLabel = "";
   state.compareRaw = null;
   state.compareCourses = [];
 }
