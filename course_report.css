@@ -624,6 +624,22 @@ body.has-comparison .compare-button {
   font-weight: 800;
 }
 
+.chart-axis-title {
+  fill: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.chart-summary {
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-top: 10px;
+}
+
 .chart-axis {
   stroke: var(--ink);
   stroke-width: 1;
@@ -769,6 +785,24 @@ tbody tr:hover td {
 }
 
 .course-link-stat.delta-neutral {
+  color: var(--muted);
+}
+
+.course-link:hover .course-link-stat.delta-positive,
+.course-link:focus .course-link-stat.delta-positive,
+.course-link.active .course-link-stat.delta-positive {
+  color: var(--accent);
+}
+
+.course-link:hover .course-link-stat.delta-negative,
+.course-link:focus .course-link-stat.delta-negative,
+.course-link.active .course-link-stat.delta-negative {
+  color: var(--risk);
+}
+
+.course-link:hover .course-link-stat.delta-neutral,
+.course-link:focus .course-link-stat.delta-neutral,
+.course-link.active .course-link-stat.delta-neutral {
   color: var(--muted);
 }
 

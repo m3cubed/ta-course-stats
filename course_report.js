@@ -41,6 +41,12 @@
   document.addEventListener("dragover", handleDragOver);
   document.addEventListener("dragleave", handleDragLeave);
   document.addEventListener("drop", handleDrop);
+  if (dropOverlay) {
+    dropOverlay.addEventListener("dragenter", handleDragEnter);
+    dropOverlay.addEventListener("dragover", handleDragOver);
+    dropOverlay.addEventListener("dragleave", handleDragLeave);
+    dropOverlay.addEventListener("drop", handleDrop);
+  }
   window.addEventListener("hashchange", render);
 
   loadStoredData();
@@ -145,35 +151,39 @@
   }
 
   function handleDragEnter(event) {
-    if (!hasDraggedFiles(event)) return;
+    if (!isPotentialFileDrag(event)) return;
     event.preventDefault();
+    event.stopPropagation();
     dragDepth += 1;
     setDragActive(true);
   }
 
   function handleDragOver(event) {
-    if (!hasDraggedFiles(event)) return;
+    if (!isPotentialFileDrag(event)) return;
     event.preventDefault();
+    event.stopPropagation();
     event.dataTransfer.dropEffect = "copy";
     setDragActive(true);
   }
 
   function handleDragLeave(event) {
-    if (!hasDraggedFiles(event)) return;
+    if (!isPotentialFileDrag(event)) return;
     event.preventDefault();
+    event.stopPropagation();
     dragDepth = Math.max(0, dragDepth - 1);
     if (!dragDepth) setDragActive(false);
   }
 
   function handleDrop(event) {
-    if (!hasDraggedFiles(event)) return;
+    if (!isPotentialFileDrag(event)) return;
     event.preventDefault();
+    event.stopPropagation();
     dragDepth = 0;
     setDragActive(false);
 
     const files = Array.from(event.dataTransfer.files || []);
     if (!files.length) {
-      renderError("Drop a JSON file.");
+      renderError("The browser did not receive a file. Drag the JSON from File Explorer, or use Choose JSON.");
       return;
     }
 
@@ -185,8 +195,16 @@
     loadJsonFile(files[0], state.courses.length ? "compare" : "base");
   }
 
-  function hasDraggedFiles(event) {
-    return Array.from(event.dataTransfer?.types || []).includes("Files");
+  function isPotentialFileDrag(event) {
+    const dataTransfer = event.dataTransfer;
+    if (!dataTransfer) return false;
+    if (dataTransfer.files && dataTransfer.files.length > 0) return true;
+    return Array.from(dataTransfer.types || []).some((type) => (
+      type === "Files" ||
+      type === "application/x-moz-file" ||
+      type === "public.file-url" ||
+      type === "text/uri-list"
+    ));
   }
 
   function setDragActive(active) {
@@ -441,6 +459,7 @@
     }
 
     const currentId = getCourseIdFromHash();
+    const comparison = hasComparison() ? comparisonSummary() : null;
     const overview = el("a", {
       className: currentId || window.location.hash === ROUTE_COMPARE ? "course-link" : "course-link active",
       href: "#/",
@@ -448,14 +467,16 @@
       el("span", { className: "course-link-index", text: "00" }),
       el("span", { className: "course-link-main" }, [
         el("span", { className: "course-link-name", text: "Overview" }),
-        el("span", { className: "course-link-meta", text: overviewMetaText() }),
+        el("span", { className: "course-link-meta", text: overviewNavMetaText(comparison) }),
       ]),
-      el("span", { className: "course-link-stat", text: formatGradePercent(computeStats(state.courses.flatMap((course) => course.grades)).average) }),
+      el("span", {
+        className: `course-link-stat ${comparison ? deltaClass(comparison.averageDelta) : ""}`,
+        text: overviewNavStatText(comparison),
+      }),
     ]);
     courseNav.append(overview);
 
     if (hasComparison()) {
-      const comparison = comparisonSummary();
       const link = el("a", {
         className: window.location.hash === ROUTE_COMPARE ? "course-link active" : "course-link",
         href: ROUTE_COMPARE,
@@ -529,6 +550,11 @@
   }
 
   function renderOverview() {
+    if (hasComparison()) {
+      renderComparisonOverview();
+      return;
+    }
+
     const aggregate = computeStats(state.courses.flatMap((course) => course.grades));
     const sectionTotal = totalSections();
     const metrics = [
@@ -559,6 +585,56 @@
           name: "All courses",
           grades: state.courses.flatMap((course) => course.grades),
           stats: aggregate,
+        })),
+      ]),
+    );
+  }
+
+  function renderComparisonOverview() {
+    const summary = comparisonSummary();
+    const metrics = [
+      metric("Base courses", summary.base.courseCount),
+      metric("Compare courses", summary.next.courseCount),
+      metric("Course delta", formatSignedCount(summary.next.courseCount - summary.base.courseCount)),
+      metric("Base students", summary.base.stats.count),
+      metric("Compare students", summary.next.stats.count),
+      metric("Student delta", formatSignedCount(summary.studentDelta)),
+      metric("Base sections", summary.base.sectionCount),
+      metric("Compare sections", summary.next.sectionCount),
+      metric("Section delta", formatSignedCount(summary.sectionDelta)),
+      metric("Base average", formatGrade(summary.base.stats.average)),
+      metric("Compare average", formatGrade(summary.next.stats.average)),
+      metric("Average delta", formatSignedGrade(summary.averageDelta)),
+      metric("Base median", formatGrade(summary.base.stats.median)),
+      metric("Compare median", formatGrade(summary.next.stats.median)),
+      metric("Median delta", formatSignedGrade(summary.medianDelta)),
+      metric("Base IQR", formatGrade(summary.base.stats.iqr)),
+      metric("Compare IQR", formatGrade(summary.next.stats.iqr)),
+      metric("IQR delta", formatSignedGrade(summary.iqrDelta)),
+      metric("Under 50% delta", formatSignedCount(summary.riskCountDelta)),
+      metric("80%+ delta", formatSignedCount(summary.distinctionCountDelta)),
+    ];
+
+    app.replaceChildren(
+      el("article", {}, [
+        pageHead("Overview", comparisonOverviewSubtitle(summary), "00"),
+        el("div", { className: "comparison-metrics" }, metrics),
+        section("Course Comparison", renderComparisonTable(comparisonPairs())),
+        section("Base Grade Bands", renderBands(summary.base.stats.bands, summary.base.stats.count)),
+        section("Compare Grade Bands", renderBands(summary.next.stats.bands, summary.next.stats.count)),
+        section("Grade Band Shifts", renderBandComparison(summary.base.stats, summary.next.stats)),
+        section("Base Percentiles", renderPercentileTable(summary.base.stats)),
+        section("Compare Percentiles", renderPercentileTable(summary.next.stats)),
+        section("Percentile Shifts", renderPercentileComparison(summary.base.stats, summary.next.stats)),
+        section("Base Distribution", renderDistributionChart({
+          name: state.fileName,
+          grades: state.courses.flatMap((course) => course.grades),
+          stats: summary.base.stats,
+        })),
+        section("Compare Distribution", renderDistributionChart({
+          name: state.compareFileName,
+          grades: state.compareCourses.flatMap((course) => course.grades),
+          stats: summary.next.stats,
         })),
       ]),
     );
@@ -903,8 +979,8 @@
     }
 
     const width = 960;
-    const height = 320;
-    const margin = { top: 24, right: 28, bottom: 44, left: 50 };
+    const height = 360;
+    const margin = { top: 24, right: 28, bottom: 72, left: 72 };
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const minGrade = Math.min(0, Math.floor(Math.min(...values) / 10) * 10);
@@ -1004,25 +1080,36 @@
       children.push(svg("text", {
         class: "chart-label",
         x: x(tick),
-        y: height - 14,
+        y: margin.top + plotHeight + 30,
         "text-anchor": "middle",
       }, formatGrade(tick)));
     }
 
     children.push(svg("text", {
-      class: "chart-label",
-      x: width - margin.right,
-      y: margin.top + 16,
-      "text-anchor": "end",
-    }, `Average ${formatGrade(stats.average)} / Median ${formatGrade(stats.median)}`));
+      class: "chart-axis-title",
+      x: margin.left + plotWidth / 2,
+      y: height - 18,
+      "text-anchor": "middle",
+    }, "Grade (%)"));
+    children.push(svg("text", {
+      class: "chart-axis-title",
+      x: 20,
+      y: margin.top + plotHeight / 2,
+      "text-anchor": "middle",
+      transform: `rotate(-90 20 ${margin.top + plotHeight / 2})`,
+    }, "Students"));
 
     return el("div", { className: "chart-wrap" }, [
       svg("svg", {
         class: "distribution-chart",
         role: "img",
-        "aria-label": `${course.name} grade distribution`,
+        "aria-label": `${course.name} grade distribution. Average ${formatGrade(stats.average)}. Median ${formatGrade(stats.median)}.`,
         viewBox: `0 0 ${width} ${height}`,
       }, children),
+      el("div", {
+        className: "chart-summary",
+        text: `Average ${formatGrade(stats.average)} / Median ${formatGrade(stats.median)}`,
+      }),
     ]);
   }
 
@@ -1137,6 +1224,25 @@
   function overviewMetaText() {
     const sections = totalSections();
     return `${totalStudents()} students${sections ? ` / ${sections} sections` : ""}`;
+  }
+
+  function overviewNavMetaText(comparison) {
+    if (!comparison) return overviewMetaText();
+    return `${comparison.base.stats.count} -> ${comparison.next.stats.count} students`;
+  }
+
+  function overviewNavStatText(comparison) {
+    const aggregate = computeStats(state.courses.flatMap((course) => course.grades));
+    if (!comparison) return formatGradePercent(aggregate.average);
+    return `${formatGradePercent(comparison.base.stats.average)} ${formatSignedGradePercent(comparison.averageDelta)}`;
+  }
+
+  function comparisonOverviewSubtitle(summary) {
+    return `${state.fileName}: ${fileSetMetaText(summary.base)} / ${state.compareFileName}: ${fileSetMetaText(summary.next)}`;
+  }
+
+  function fileSetMetaText(aggregate) {
+    return `${aggregate.courseCount} courses / ${aggregate.stats.count} students${aggregate.sectionCount ? ` / ${aggregate.sectionCount} sections` : ""}`;
   }
 
   function courseMetaText(course) {
