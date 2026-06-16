@@ -397,6 +397,34 @@ body.has-comparison .compare-label-field {
   white-space: nowrap;
 }
 
+.course-link-meta-flow {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.course-link-meta-symbol {
+  background: var(--secondary);
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 1px;
+  opacity: 0.85;
+  position: relative;
+  width: 15px;
+}
+
+.course-link-meta-symbol::after {
+  border-right: 1px solid var(--secondary);
+  border-top: 1px solid var(--secondary);
+  content: "";
+  height: 5px;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 5px;
+}
+
 .course-link-stat {
   align-items: center;
   border-left: 1px solid var(--rule-soft);

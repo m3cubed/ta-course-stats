@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Course Grade Report</title>
-    <link rel="stylesheet" href="course_report.css">
+    <link rel="stylesheet" href="course_report.css" />
   </head>
   <body>
     <header class="topbar">
@@ -17,24 +17,40 @@
       </a>
       <div class="file-controls">
         <span id="fileStatus" class="file-status">No file loaded</span>
-        <button id="clearButton" class="clear-button" type="button">Clear file</button>
+        <button id="clearButton" class="clear-button" type="button">
+          Clear file(s)
+        </button>
         <label class="compare-button">
-          <input id="compareFileInput" type="file" accept=".json,application/json">
+          <input
+            id="compareFileInput"
+            type="file"
+            accept=".json,application/json"
+          />
           Compare JSON
         </label>
         <label class="file-button">
-          <input id="fileInput" type="file" accept=".json,application/json">
+          <input id="fileInput" type="file" accept=".json,application/json" />
           Choose JSON
         </label>
       </div>
       <div id="labelControls" class="label-controls" aria-label="File labels">
         <label class="label-field">
           <span>First file label</span>
-          <input id="fileLabelInput" type="text" autocomplete="off" spellcheck="false">
+          <input
+            id="fileLabelInput"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
         </label>
         <label class="label-field compare-label-field">
           <span>Second file label</span>
-          <input id="compareFileLabelInput" type="text" autocomplete="off" spellcheck="false">
+          <input
+            id="compareFileLabelInput"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
         </label>
       </div>
     </header>

@@ -116,7 +116,7 @@ function renderCourseNav() {
       el("span", { className: "course-link-index", text: String(index + 1).padStart(2, "0") }),
       el("span", { className: "course-link-main" }, [
         el("span", { className: "course-link-name", text: course.name }),
-        el("span", { className: "course-link-meta", text: courseNavMetaText(course, compareCourse) }),
+        renderCourseNavMeta(course, compareCourse),
       ]),
       el("span", {
         className: `course-link-stat ${compareCourse ? deltaClass(deltaValue(course.stats.average, compareCourse.stats.average)) : ""}`,
@@ -146,6 +146,21 @@ function renderCourseNav() {
       courseNav.append(link);
     }
   }
+}
+
+function renderCourseNavMeta(course, compareCourse, source = "base") {
+  if (!compareCourse) {
+    return el("span", { className: "course-link-meta", text: courseNavMetaText(course, compareCourse, source) });
+  }
+
+  return el("span", {
+    className: "course-link-meta course-link-meta-flow",
+    "aria-label": courseNavMetaText(course, compareCourse, source),
+  }, [
+    el("span", { "aria-hidden": "true", text: String(course.stats.count) }),
+    el("span", { className: "course-link-meta-symbol", "aria-hidden": "true" }),
+    el("span", { "aria-hidden": "true", text: `${compareCourse.stats.count} students` }),
+  ]);
 }
 
 function renderEmpty() {
@@ -679,7 +694,8 @@ function renderDistributionChart(course) {
 
   const width = 960;
   const height = 360;
-  const margin = { top: 24, right: 28, bottom: 72, left: 72 };
+  const margin = { top: 24, right: 28, bottom: 72, left: 88 };
+  const yAxisTitleX = 24;
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const minGrade = Math.min(0, Math.floor(Math.min(...values) / 10) * 10);
@@ -792,10 +808,10 @@ function renderDistributionChart(course) {
   }, "Grade (%)"));
   children.push(svg("text", {
     class: "chart-axis-title",
-    x: 20,
+    x: yAxisTitleX,
     y: margin.top + plotHeight / 2,
     "text-anchor": "middle",
-    transform: `rotate(-90 20 ${margin.top + plotHeight / 2})`,
+    transform: `rotate(-90 ${yAxisTitleX} ${margin.top + plotHeight / 2})`,
   }, "Students"));
 
   return el("div", { className: "chart-wrap" }, [

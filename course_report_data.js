@@ -28,7 +28,9 @@ function normalizeCourses(raw) {
 
 function courseNameFromValue(value, index) {
   if (value && typeof value === "object") {
-    return value.courseId || value.course || value.name || `Course ${index + 1}`;
+    return (
+      value.courseId || value.course || value.name || `Course ${index + 1}`
+    );
   }
 
   return `Course ${index + 1}`;
@@ -43,11 +45,13 @@ function extractGrades(value) {
     return [];
   }
 
-  const source =
-    Array.isArray(value.grades) ? value.grades :
-    Array.isArray(value.students) ? value.students :
-    Array.isArray(value.marks) ? value.marks :
-    [];
+  const source = Array.isArray(value.grades)
+    ? value.grades
+    : Array.isArray(value.students)
+      ? value.students
+      : Array.isArray(value.marks)
+        ? value.marks
+        : [];
 
   return source.map(parseGradeValue).filter(Number.isFinite);
 }
@@ -57,11 +61,13 @@ function extractSectionIds(value) {
     return [];
   }
 
-  const source =
-    Array.isArray(value.courseIds) ? value.courseIds :
-    Array.isArray(value.sectionIds) ? value.sectionIds :
-    Array.isArray(value.sections) ? value.sections :
-    [];
+  const source = Array.isArray(value.courseIds)
+    ? value.courseIds
+    : Array.isArray(value.sectionIds)
+      ? value.sectionIds
+      : Array.isArray(value.sections)
+        ? value.sections
+        : [];
 
   return source
     .map((section) => {
@@ -89,7 +95,15 @@ function parseGradeValue(value) {
   }
 
   if (value && typeof value === "object") {
-    const fields = ["grade", "mark", "percentage", "percent", "score", "final", "current"];
+    const fields = [
+      "grade",
+      "mark",
+      "percentage",
+      "percent",
+      "score",
+      "final",
+      "current",
+    ];
     for (const field of fields) {
       const parsed = parseGradeValue(value[field]);
       if (Number.isFinite(parsed)) return parsed;
@@ -128,7 +142,9 @@ function computeStats(grades) {
 
   const sum = values.reduce((total, grade) => total + grade, 0);
   const average = sum / count;
-  const variance = values.reduce((total, grade) => total + Math.pow(grade - average, 2), 0) / count;
+  const variance =
+    values.reduce((total, grade) => total + Math.pow(grade - average, 2), 0) /
+    count;
   const passCount = values.filter((grade) => grade >= 50).length;
   const riskCount = values.filter((grade) => grade < 50).length;
   const distinctionCount = values.filter((grade) => grade >= 80).length;
@@ -169,12 +185,12 @@ function percentile(sortedValues, p) {
 
 function makeBands(values) {
   const bands = [
-    { label: "<50%", min: -Infinity, max: 49.999, count: 0 },
-    { label: "50-59%", min: 50, max: 59.999, count: 0 },
-    { label: "60-69%", min: 60, max: 69.999, count: 0 },
-    { label: "70-79%", min: 70, max: 79.999, count: 0 },
-    { label: "80-89%", min: 80, max: 89.999, count: 0 },
-    { label: "90-99%", min: 90, max: 99.499, count: 0 },
+    { label: "< 50%", min: -Infinity, max: 49.999, count: 0 },
+    { label: "50 - 59%", min: 50, max: 59.999, count: 0 },
+    { label: "60 - 69%", min: 60, max: 69.999, count: 0 },
+    { label: "70 - 79%", min: 70, max: 79.999, count: 0 },
+    { label: "80 - 89%", min: 80, max: 89.999, count: 0 },
+    { label: "90 - 99%", min: 90, max: 99.499, count: 0 },
     { label: "100%", min: 99.5, max: Infinity, count: 0 },
   ];
 
@@ -193,7 +209,9 @@ function makeBands(values) {
 
 function getCourseIdFromHash() {
   if (!window.location.hash.startsWith(ROUTE_COURSE_PREFIX)) return "";
-  return decodeURIComponent(window.location.hash.slice(ROUTE_COURSE_PREFIX.length));
+  return decodeURIComponent(
+    window.location.hash.slice(ROUTE_COURSE_PREFIX.length),
+  );
 }
 
 function resolveCourseRoute(courseId) {
@@ -222,7 +240,9 @@ function courseIndex(course) {
 
 function courseMarker(course, source) {
   if (source === "compare") {
-    const index = state.compareCourses.findIndex((item) => item.id === course.id);
+    const index = state.compareCourses.findIndex(
+      (item) => item.id === course.id,
+    );
     return `C${String(index + 1).padStart(2, "0")}`;
   }
 
@@ -234,7 +254,10 @@ function totalStudents() {
 }
 
 function totalSections() {
-  return state.courses.reduce((total, course) => total + course.sectionCount, 0);
+  return state.courses.reduce(
+    (total, course) => total + course.sectionCount,
+    0,
+  );
 }
 
 function overviewMetaText() {
@@ -249,7 +272,9 @@ function overviewNavMetaText(comparison) {
 }
 
 function overviewNavStatText(comparison) {
-  const aggregate = aggregateCourseSet(comparison ? combinedOverviewCourses() : state.courses);
+  const aggregate = aggregateCourseSet(
+    comparison ? combinedOverviewCourses() : state.courses,
+  );
   if (!comparison) return formatGradePercent(aggregate.stats.average);
   return formatGradePercent(aggregate.stats.average);
 }
@@ -274,14 +299,16 @@ function courseMetaText(course) {
 
 function coursePageSubtitle(course, source, compareCourse) {
   if (!hasComparison()) return courseMetaText(course);
-  if (compareCourse) return `${courseMetaText(course)} / matched with ${fileLabelForSource("compare")}`;
+  if (compareCourse)
+    return `${courseMetaText(course)} / matched with ${fileLabelForSource("compare")}`;
   return `${courseMetaText(course)} / only in ${fileNameForSource(source)}`;
 }
 
 function courseNavMetaText(course, compareCourse, source = "base") {
   if (!hasComparison()) return courseMetaText(course);
-  if (!compareCourse) return `Only in ${fileNameForSource(source)} / ${courseMetaText(course)}`;
-  return `${course.stats.count} -> ${compareCourse.stats.count} students`;
+  if (!compareCourse)
+    return `Only in ${fileNameForSource(source)} / ${courseMetaText(course)}`;
+  return `${course.stats.count} to ${compareCourse.stats.count} students`;
 }
 
 function courseNavStatText(course, compareCourse) {
@@ -331,7 +358,8 @@ function combinedOverviewCourses() {
 
 function addCombinedCourse(byName, course, source) {
   const existing = byName.get(course.name);
-  const routeId = source === "compare" ? compareOnlyRouteId(course.id) : course.id;
+  const routeId =
+    source === "compare" ? compareOnlyRouteId(course.id) : course.id;
 
   if (existing) {
     existing.grades.push(...course.grades);
@@ -355,13 +383,18 @@ function addCombinedCourse(byName, course, source) {
 function aggregateCourseSet(courses) {
   return {
     courseCount: courses.length,
-    sectionCount: courses.reduce((total, course) => total + course.sectionCount, 0),
+    sectionCount: courses.reduce(
+      (total, course) => total + course.sectionCount,
+      0,
+    ),
     stats: computeStats(courses.flatMap((course) => course.grades)),
   };
 }
 
 function comparisonPairs() {
-  const compareByName = new Map(state.compareCourses.map((course) => [course.name, course]));
+  const compareByName = new Map(
+    state.compareCourses.map((course) => [course.name, course]),
+  );
   const used = new Set();
   const pairs = state.courses.map((base) => {
     const next = compareByName.get(base.name) || null;
@@ -386,7 +419,9 @@ function coursePairHref(pair) {
 function comparisonSummary() {
   const base = aggregateCourseSet(state.courses);
   const next = aggregateCourseSet(state.compareCourses);
-  const matchedCount = comparisonPairs().filter((pair) => pair.base && pair.next).length;
+  const matchedCount = comparisonPairs().filter(
+    (pair) => pair.base && pair.next,
+  ).length;
 
   return {
     base,
@@ -398,7 +433,10 @@ function comparisonSummary() {
     medianDelta: deltaValue(base.stats.median, next.stats.median),
     iqrDelta: deltaValue(base.stats.iqr, next.stats.iqr),
     riskCountDelta: deltaValue(base.stats.riskCount, next.stats.riskCount),
-    distinctionCountDelta: deltaValue(base.stats.distinctionCount, next.stats.distinctionCount),
+    distinctionCountDelta: deltaValue(
+      base.stats.distinctionCount,
+      next.stats.distinctionCount,
+    ),
   };
 }
 
@@ -414,7 +452,10 @@ function fileNameForSource(source) {
 
 function fileLabelForSource(source) {
   if (source === "compare") {
-    return state.compareFileLabel || defaultFileLabel(state.compareFileName, "Second file");
+    return (
+      state.compareFileLabel ||
+      defaultFileLabel(state.compareFileName, "Second file")
+    );
   }
 
   return state.fileLabel || defaultFileLabel(state.fileName, "First file");

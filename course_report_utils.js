@@ -6,7 +6,10 @@ function deltaValue(baseValue, nextValue) {
 }
 
 function deltaCell(value, formatter, lowerIsBetter) {
-  return el("td", { className: `number-cell delta-cell ${deltaClass(value, lowerIsBetter)}`, text: formatter(value) });
+  return el("td", {
+    className: `number-cell delta-cell ${deltaClass(value, lowerIsBetter)}`,
+    text: formatter(value),
+  });
 }
 
 function deltaClass(value, lowerIsBetter) {
@@ -23,11 +26,17 @@ function formatComparisonValue(value, formatter) {
 }
 
 function maxBy(items, getter) {
-  return items.reduce((best, item) => getter(item) > getter(best) ? item : best, items[0]);
+  return items.reduce(
+    (best, item) => (getter(item) > getter(best) ? item : best),
+    items[0],
+  );
 }
 
 function minBy(items, getter) {
-  return items.reduce((best, item) => getter(item) < getter(best) ? item : best, items[0]);
+  return items.reduce(
+    (best, item) => (getter(item) < getter(best) ? item : best),
+    items[0],
+  );
 }
 
 function clamp(value, min, max) {
@@ -35,7 +44,7 @@ function clamp(value, min, max) {
 }
 
 function isRiskBand(band) {
-  return band?.label === "<50%";
+  return band?.label === "< 50%";
 }
 
 function formatGrade(value) {
