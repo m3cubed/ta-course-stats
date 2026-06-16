@@ -521,7 +521,8 @@ body.has-comparison .compare-button {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 
@@ -555,7 +556,8 @@ body.has-comparison .compare-button {
   color: var(--accent);
   font-size: 0.78rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   padding: 22px;
   text-transform: uppercase;
 }
@@ -715,7 +717,8 @@ th {
   color: var(--accent);
   font-size: 0.72rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 

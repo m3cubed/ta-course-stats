@@ -274,7 +274,7 @@ function courseMetaText(course) {
 
 function coursePageSubtitle(course, source, compareCourse) {
   if (!hasComparison()) return courseMetaText(course);
-  if (compareCourse) return `${courseMetaText(course)} / compared with ${state.compareFileName}`;
+  if (compareCourse) return `${courseMetaText(course)} / matched with ${state.compareFileName}`;
   return `${courseMetaText(course)} / only in ${fileNameForSource(source)}`;
 }
 
