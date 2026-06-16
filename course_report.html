@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Course Grade Report</title>
+    <link rel="stylesheet" href="course_report.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#/">
+        <span class="folio">01</span>
+        <span class="brand-copy">
+          <span class="brand-title">Course Grade Report</span>
+          <span class="brand-subtitle">Local JSON viewer</span>
+        </span>
+      </a>
+      <div class="file-controls">
+        <span id="fileStatus" class="file-status">No file loaded</span>
+        <button id="clearButton" class="clear-button" type="button">Clear file</button>
+        <label class="compare-button">
+          <input id="compareFileInput" type="file" accept=".json,application/json">
+          Compare JSON
+        </label>
+        <label class="file-button">
+          <input id="fileInput" type="file" accept=".json,application/json">
+          Choose JSON
+        </label>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="Courses">
+        <div class="sidebar-heading">Courses</div>
+        <nav id="courseNav" class="course-nav"></nav>
+      </aside>
+      <section id="app" class="content" aria-live="polite"></section>
+    </main>
+
+    <div id="dropOverlay" class="drop-overlay" aria-hidden="true">
+      <div class="drop-panel">
+        <span class="drop-marker">JSON</span>
+        <span id="dropTitle">Drop JSON</span>
+      </div>
+    </div>
+
+    <script src="course_report.js" defer></script>
+  </body>
+</html>
