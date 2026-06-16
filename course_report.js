@@ -4,6 +4,7 @@
   const STORAGE_KEY = "course-grade-report:data";
   const ROUTE_COURSE_PREFIX = "#/course/";
   const ROUTE_COMPARE = "#/compare";
+  const COMPARE_ONLY_ROUTE_PREFIX = "compare:";
 
   const state = {
     fileName: "",
@@ -430,9 +431,9 @@
 
     const courseId = getCourseIdFromHash();
     if (courseId) {
-      const course = state.courses.find((item) => item.id === courseId);
-      if (course) {
-        renderCourse(course);
+      const routeCourse = resolveCourseRoute(courseId);
+      if (routeCourse) {
+        renderCourse(routeCourse.course, routeCourse.source);
       } else {
         renderMessage("Course not found", "Select a course from the list.");
       }
@@ -504,10 +505,31 @@
         ]),
         el("span", {
           className: `course-link-stat ${compareCourse ? deltaClass(deltaValue(course.stats.average, compareCourse.stats.average)) : ""}`,
-          text: courseNavStatText(course, compareCourse),
+          text: courseNavStatText(course, compareCourse, "base"),
         }),
       ]);
       courseNav.append(link);
+    }
+
+    if (hasComparison()) {
+      for (const [index, course] of compareOnlyCourses().entries()) {
+        const routeId = compareOnlyRouteId(course.id);
+        const link = el("a", {
+          className: routeId === currentId ? "course-link active" : "course-link",
+          href: `${ROUTE_COURSE_PREFIX}${encodeURIComponent(routeId)}`,
+        }, [
+          el("span", { className: "course-link-index", text: `C${String(index + 1).padStart(2, "0")}` }),
+          el("span", { className: "course-link-main" }, [
+            el("span", { className: "course-link-name", text: course.name }),
+            el("span", { className: "course-link-meta", text: courseNavMetaText(course, null, "compare") }),
+          ]),
+          el("span", {
+            className: "course-link-stat",
+            text: courseNavStatText(course, null, "compare"),
+          }),
+        ]);
+        courseNav.append(link);
+      }
     }
   }
 
@@ -665,9 +687,9 @@
     );
   }
 
-  function renderCourse(course) {
+  function renderCourse(course, source = "base") {
     const stats = course.stats;
-    const compareCourse = findCompareCourse(course.name);
+    const compareCourse = source === "base" ? findCompareCourse(course.name) : null;
     const metrics = [
       metric("Students", stats.count),
       course.sectionCount ? metric("Sections", course.sectionCount) : null,
@@ -686,9 +708,9 @@
 
     app.replaceChildren(
       el("article", {}, [
-        pageHead(course.name, courseMetaText(course), courseIndex(course)),
+        pageHead(course.name, coursePageSubtitle(course, source, compareCourse), courseMarker(course, source)),
         metricGrid(metrics),
-        compareCourse ? section("Comparison", renderCourseComparison(course, compareCourse)) : null,
+        hasComparison() ? section("Comparison", compareCourse ? renderCourseComparison(course, compareCourse) : renderNoComparison(course, source)) : null,
         section("Distribution", renderDistributionChart(course)),
         section("Grade Bands", renderBands(stats.bands, stats.count)),
         section("Percentiles", renderPercentileTable(stats)),
@@ -755,7 +777,7 @@
       ]);
     });
 
-    return el("div", { className: "table-wrap" }, [
+    return el("div", { className: "table-wrap overview-table-wrap" }, [
       el("table", {}, [
         el("thead", {}, [
           el("tr", {}, [
@@ -782,7 +804,13 @@
       const base = pair.base;
       const next = pair.next;
       return el("tr", {}, [
-        el("td", { text: pair.name }),
+        el("td", {}, [
+          el("a", {
+            className: "course-table-link",
+            href: coursePairHref(pair),
+            text: pair.name,
+          }),
+        ]),
         el("td", { text: comparisonStatus(pair) }),
         el("td", { className: "number-cell", text: base ? String(base.stats.count) : "" }),
         el("td", { className: "number-cell", text: next ? String(next.stats.count) : "" }),
@@ -860,6 +888,18 @@
       ]),
       renderBandComparison(base.stats, next.stats),
       renderPercentileComparison(base.stats, next.stats),
+    ]);
+  }
+
+  function renderNoComparison(course, source) {
+    const currentFileName = source === "compare" ? state.compareFileName : state.fileName;
+    const otherFileName = source === "compare" ? state.fileName : state.compareFileName;
+
+    return el("div", { className: "comparison-note" }, [
+      el("div", { className: "comparison-note-title", text: `Only in ${currentFileName}` }),
+      el("p", {
+        text: `${course.name} appears only in ${currentFileName}. No matching course was found in ${otherFileName}.`,
+      }),
     ]);
   }
 
@@ -1208,9 +1248,37 @@
     return decodeURIComponent(window.location.hash.slice(ROUTE_COURSE_PREFIX.length));
   }
 
+  function resolveCourseRoute(courseId) {
+    if (isCompareOnlyRouteId(courseId)) {
+      const compareId = courseId.slice(COMPARE_ONLY_ROUTE_PREFIX.length);
+      const course = state.compareCourses.find((item) => item.id === compareId);
+      return course ? { course, source: "compare" } : null;
+    }
+
+    const course = state.courses.find((item) => item.id === courseId);
+    return course ? { course, source: "base" } : null;
+  }
+
+  function compareOnlyRouteId(courseId) {
+    return `${COMPARE_ONLY_ROUTE_PREFIX}${courseId}`;
+  }
+
+  function isCompareOnlyRouteId(courseId) {
+    return courseId.startsWith(COMPARE_ONLY_ROUTE_PREFIX);
+  }
+
   function courseIndex(course) {
     const index = state.courses.findIndex((item) => item.id === course.id);
     return String(index + 1).padStart(2, "0");
+  }
+
+  function courseMarker(course, source) {
+    if (source === "compare") {
+      const index = state.compareCourses.findIndex((item) => item.id === course.id);
+      return `C${String(index + 1).padStart(2, "0")}`;
+    }
+
+    return courseIndex(course);
   }
 
   function totalStudents() {
@@ -1249,8 +1317,15 @@
     return `${course.stats.count} students${course.sectionCount ? ` / ${course.sectionCount} sections` : ""}`;
   }
 
-  function courseNavMetaText(course, compareCourse) {
-    if (!compareCourse) return courseMetaText(course);
+  function coursePageSubtitle(course, source, compareCourse) {
+    if (!hasComparison()) return courseMetaText(course);
+    if (compareCourse) return `${courseMetaText(course)} / compared with ${state.compareFileName}`;
+    return `${courseMetaText(course)} / only in ${fileNameForSource(source)}`;
+  }
+
+  function courseNavMetaText(course, compareCourse, source = "base") {
+    if (!hasComparison()) return courseMetaText(course);
+    if (!compareCourse) return `Only in ${fileNameForSource(source)} / ${courseMetaText(course)}`;
     return `${course.stats.count} -> ${compareCourse.stats.count} students`;
   }
 
@@ -1271,6 +1346,11 @@
 
   function findCompareCourse(courseName) {
     return state.compareCourses.find((course) => course.name === courseName);
+  }
+
+  function compareOnlyCourses() {
+    const baseNames = new Set(state.courses.map((course) => course.name));
+    return state.compareCourses.filter((course) => !baseNames.has(course.name));
   }
 
   function aggregateCourseSet(courses) {
@@ -1299,6 +1379,11 @@
     return pairs;
   }
 
+  function coursePairHref(pair) {
+    const routeId = pair.base ? pair.base.id : compareOnlyRouteId(pair.next.id);
+    return `${ROUTE_COURSE_PREFIX}${encodeURIComponent(routeId)}`;
+  }
+
   function comparisonSummary() {
     const base = aggregateCourseSet(state.courses);
     const next = aggregateCourseSet(state.compareCourses);
@@ -1320,8 +1405,12 @@
 
   function comparisonStatus(pair) {
     if (pair.base && pair.next) return "Matched";
-    if (pair.base) return "Base only";
-    return "Compare only";
+    if (pair.base) return `Only in ${state.fileName}`;
+    return `Only in ${state.compareFileName}`;
+  }
+
+  function fileNameForSource(source) {
+    return source === "compare" ? state.compareFileName : state.fileName;
   }
 
   function deltaValue(baseValue, nextValue) {

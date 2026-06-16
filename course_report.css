@@ -331,6 +331,10 @@ body.has-comparison .compare-button {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .course-link-stat {
@@ -684,6 +688,10 @@ body.has-comparison .compare-button {
   overflow-x: auto;
 }
 
+.overview-table-wrap table {
+  min-width: 1040px;
+}
+
 .comparison-table-wrap table {
   min-width: 1360px;
 }
@@ -691,7 +699,6 @@ body.has-comparison .compare-button {
 table {
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
-  min-width: 1040px;
   width: 100%;
 }
 
@@ -809,6 +816,31 @@ tbody tr:hover td {
 .comparison-stack {
   display: grid;
   gap: 14px;
+}
+
+.comparison-note {
+  background: var(--surface);
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.comparison-note-title {
+  color: var(--secondary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.comparison-note p {
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .risk-tone .table-meter-fill {
