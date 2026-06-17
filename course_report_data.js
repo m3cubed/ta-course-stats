@@ -38,7 +38,15 @@ function courseNameFromValue(value, index) {
 
 function extractGrades(value) {
   if (Array.isArray(value)) {
-    return value.map(parseGradeValue).filter(Number.isFinite);
+    return value
+      .flatMap((item) => {
+        if (item && typeof item === "object") {
+          return extractGrades(item);
+        }
+
+        return [parseGradeValue(item)];
+      })
+      .filter(Number.isFinite);
   }
 
   if (!value || typeof value !== "object") {
@@ -57,17 +65,15 @@ function extractGrades(value) {
 }
 
 function extractSectionIds(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(extractSectionIds).filter(Boolean);
+  }
+
   if (!value || typeof value !== "object") {
     return [];
   }
 
-  const source = Array.isArray(value.courseIds)
-    ? value.courseIds
-    : Array.isArray(value.sectionIds)
-      ? value.sectionIds
-      : Array.isArray(value.sections)
-        ? value.sections
-        : [];
+  const source = sectionSource(value);
 
   return source
     .map((section) => {
@@ -82,6 +88,18 @@ function extractSectionIds(value) {
       return "";
     })
     .filter(Boolean);
+}
+
+function sectionSource(value) {
+  const fields = ["courseIds", "courseId", "sectionIds", "sectionId", "sections"];
+
+  for (const field of fields) {
+    const source = value[field];
+    if (Array.isArray(source)) return source;
+    if (typeof source === "string" || typeof source === "number") return [source];
+  }
+
+  return [];
 }
 
 function parseGradeValue(value) {
