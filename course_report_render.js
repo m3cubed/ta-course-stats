@@ -244,28 +244,7 @@ function renderComparisonOverview() {
   const summary = comparisonSummary();
   const firstLabel = fileLabelForSource("base");
   const secondLabel = fileLabelForSource("compare");
-  const metrics = [
-    metric(`${firstLabel} courses`, summary.base.courseCount),
-    metric(`${secondLabel} courses`, summary.next.courseCount),
-    metric("Course delta", formatSignedCount(summary.next.courseCount - summary.base.courseCount)),
-    metric(`${firstLabel} students`, summary.base.stats.count),
-    metric(`${secondLabel} students`, summary.next.stats.count),
-    metric("Student delta", formatSignedCount(summary.studentDelta)),
-    metric(`${firstLabel} sections`, summary.base.sectionCount),
-    metric(`${secondLabel} sections`, summary.next.sectionCount),
-    metric("Section delta", formatSignedCount(summary.sectionDelta)),
-    metric(`${firstLabel} average`, formatGrade(summary.base.stats.average)),
-    metric(`${secondLabel} average`, formatGrade(summary.next.stats.average)),
-    metric("Average delta", formatSignedGrade(summary.averageDelta)),
-    metric(`${firstLabel} median`, formatGrade(summary.base.stats.median)),
-    metric(`${secondLabel} median`, formatGrade(summary.next.stats.median)),
-    metric("Median delta", formatSignedGrade(summary.medianDelta)),
-    metric(`${firstLabel} IQR`, formatGrade(summary.base.stats.iqr)),
-    metric(`${secondLabel} IQR`, formatGrade(summary.next.stats.iqr)),
-    metric("IQR delta", formatSignedGrade(summary.iqrDelta)),
-    metric("Under 50% delta", formatSignedCount(summary.riskCountDelta)),
-    metric("80%+ delta", formatSignedCount(summary.distinctionCountDelta)),
-  ];
+  const metrics = comparisonOverviewMetricItems(summary, firstLabel, secondLabel);
 
   app.replaceChildren(
     el("article", {}, [
@@ -324,10 +303,7 @@ function renderCourse(course, source = "base") {
   const percentilesTitle = currentFileName ? `${currentFileName} Percentiles` : "Percentiles";
   const gradesTitle = currentFileName ? `${currentFileName} Grades` : "Grades";
   const metrics = compareCourse
-    ? [
-      ...courseMetricItems(course, firstLabel),
-      ...courseMetricItems(compareCourse, secondLabel),
-    ]
+    ? courseComparisonMetricItems(course, compareCourse, firstLabel, secondLabel)
     : courseMetricItems(course, currentFileName);
 
   app.replaceChildren(
@@ -408,6 +384,172 @@ function courseMetricItems(course, fileLabel = "") {
     metric(`${prefix}80%+ rate`, formatPercent(stats.distinctionRate)),
     metric(`${prefix}Range`, formatRange(stats.min, stats.max)),
   ].filter((item) => item);
+}
+
+function courseComparisonMetricItems(firstCourse, secondCourse, firstLabel, secondLabel) {
+  const firstStats = firstCourse.stats;
+  const secondStats = secondCourse.stats;
+
+  return [
+    comparisonMetric("Students", firstStats.count, secondStats.count, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("Sections", firstCourse.sectionCount, secondCourse.sectionCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("Average", firstStats.average, secondStats.average, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+    }),
+    comparisonMetric("Median", firstStats.median, secondStats.median, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+    }),
+    comparisonMetric("IQR", firstStats.iqr, secondStats.iqr, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+    }),
+    comparisonMetric("Std. dev.", firstStats.stdDev, secondStats.stdDev, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+      lowerIsBetter: true,
+    }),
+    comparisonMetric("Pass count", firstStats.passCount, secondStats.passCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("Pass rate", firstStats.passRate, secondStats.passRate, {
+      firstLabel,
+      secondLabel,
+      formatter: formatPercent,
+      deltaFormatter: formatSignedPercent,
+    }),
+    comparisonMetric("Under 50% count", firstStats.riskCount, secondStats.riskCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+      lowerIsBetter: true,
+    }),
+    comparisonMetric("Under 50% rate", firstStats.riskRate, secondStats.riskRate, {
+      firstLabel,
+      secondLabel,
+      formatter: formatPercent,
+      deltaFormatter: formatSignedPercent,
+      lowerIsBetter: true,
+    }),
+    comparisonMetric("80%+ count", firstStats.distinctionCount, secondStats.distinctionCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("80%+ rate", firstStats.distinctionRate, secondStats.distinctionRate, {
+      firstLabel,
+      secondLabel,
+      formatter: formatPercent,
+      deltaFormatter: formatSignedPercent,
+    }),
+    comparisonMetric("Range", formatRange(firstStats.min, firstStats.max), formatRange(secondStats.min, secondStats.max), {
+      firstLabel,
+      secondLabel,
+    }),
+  ];
+}
+
+function comparisonOverviewMetricItems(summary, firstLabel, secondLabel) {
+  return [
+    comparisonMetric("Courses", summary.base.courseCount, summary.next.courseCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("Students", summary.base.stats.count, summary.next.stats.count, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("Sections", summary.base.sectionCount, summary.next.sectionCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+    comparisonMetric("Average", summary.base.stats.average, summary.next.stats.average, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+    }),
+    comparisonMetric("Median", summary.base.stats.median, summary.next.stats.median, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+    }),
+    comparisonMetric("IQR", summary.base.stats.iqr, summary.next.stats.iqr, {
+      firstLabel,
+      secondLabel,
+      formatter: formatGrade,
+      deltaFormatter: formatSignedGrade,
+    }),
+    comparisonMetric("Under 50% count", summary.base.stats.riskCount, summary.next.stats.riskCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+      lowerIsBetter: true,
+    }),
+    comparisonMetric("80%+ count", summary.base.stats.distinctionCount, summary.next.stats.distinctionCount, {
+      firstLabel,
+      secondLabel,
+      formatter: String,
+      deltaFormatter: formatSignedCount,
+    }),
+  ];
+}
+
+function comparisonMetric(label, firstValue, secondValue, options = {}) {
+  const formatter = options.formatter || String;
+  const firstText = formatter(firstValue);
+  const secondText = formatter(secondValue);
+  const delta = deltaValue(firstValue, secondValue);
+  const hasDelta = options.deltaFormatter && Number.isFinite(delta);
+  const noteClass = hasDelta ? `metric-note ${deltaClass(delta, options.lowerIsBetter)}` : "metric-note";
+
+  return el("div", { className: "metric metric-comparison" }, [
+    el("div", { className: "metric-label", text: label }),
+    el("div", { className: "metric-compare-row" }, [
+      el("div", { className: "metric-compare-value" }, [
+        el("div", { className: "metric-compare-file", text: options.firstLabel || "First file" }),
+        el("div", { className: "metric-compare-number", text: firstText }),
+      ]),
+      el("span", { className: "metric-compare-symbol", "aria-hidden": "true" }),
+      el("div", { className: "metric-compare-value" }, [
+        el("div", { className: "metric-compare-file", text: options.secondLabel || "Second file" }),
+        el("div", { className: "metric-compare-number", text: secondText }),
+      ]),
+    ]),
+    hasDelta ? el("div", { className: noteClass, text: `Delta ${options.deltaFormatter(delta)}` }) : null,
+  ].filter((item) => item));
 }
 
 function section(title, body) {

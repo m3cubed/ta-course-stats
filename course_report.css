@@ -631,6 +631,84 @@ body.has-comparison .compare-label-field {
   margin-top: 8px;
 }
 
+.metric-comparison {
+  min-height: 154px;
+}
+
+.metric-compare-row {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  margin-top: 14px;
+}
+
+.metric-compare-value {
+  min-width: 0;
+}
+
+.metric-compare-file {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.metric-compare-number {
+  color: var(--ink);
+  font-size: 1.55rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 8px;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.metric-compare-symbol {
+  align-self: end;
+  background: var(--secondary);
+  display: inline-block;
+  height: 1px;
+  margin-bottom: 0.72rem;
+  opacity: 0.9;
+  position: relative;
+  width: 20px;
+}
+
+.metric-compare-symbol::after {
+  border-right: 1px solid var(--secondary);
+  border-top: 1px solid var(--secondary);
+  content: "";
+  height: 6px;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 6px;
+}
+
+.metric-comparison .metric-note {
+  font-weight: 800;
+}
+
+.metric-comparison .metric-note.delta-positive {
+  color: var(--accent);
+}
+
+.metric-comparison .metric-note.delta-negative {
+  color: var(--risk);
+}
+
+.metric-comparison .metric-note.delta-neutral {
+  color: var(--muted);
+}
+
 .section {
   background: var(--surface);
   border-bottom: 1px solid var(--rule);
@@ -1291,6 +1369,10 @@ body.drag-active .drop-overlay {
 
   .metric-value {
     font-size: 2.7rem;
+  }
+
+  .metric-compare-number {
+    font-size: 1.35rem;
   }
 
   .band-row {
