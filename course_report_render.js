@@ -323,21 +323,12 @@ function renderCourse(course, source = "base") {
   const gradeBandsTitle = currentFileName ? `${currentFileName} Grade Bands` : "Grade Bands";
   const percentilesTitle = currentFileName ? `${currentFileName} Percentiles` : "Percentiles";
   const gradesTitle = currentFileName ? `${currentFileName} Grades` : "Grades";
-  const metrics = [
-    metric("Students", stats.count),
-    course.sectionCount ? metric("Sections", course.sectionCount) : null,
-    metric("Average", formatGrade(stats.average)),
-    metric("Median", formatGrade(stats.median)),
-    metric("IQR", formatGrade(stats.iqr)),
-    metric("Std. dev.", formatGrade(stats.stdDev)),
-    metric("Pass count", stats.passCount),
-    metric("Pass rate", formatPercent(stats.passRate)),
-    metric("Under 50% count", stats.riskCount),
-    metric("Under 50% rate", formatPercent(stats.riskRate)),
-    metric("80%+ count", stats.distinctionCount),
-    metric("80%+ rate", formatPercent(stats.distinctionRate)),
-    metric("Range", formatRange(stats.min, stats.max)),
-  ].filter((item) => item);
+  const metrics = compareCourse
+    ? [
+      ...courseMetricItems(course, firstLabel),
+      ...courseMetricItems(compareCourse, secondLabel),
+    ]
+    : courseMetricItems(course, currentFileName);
 
   app.replaceChildren(
     el("article", {}, [
@@ -396,6 +387,27 @@ function metric(label, value, note) {
   }
 
   return el("div", { className: "metric" }, children);
+}
+
+function courseMetricItems(course, fileLabel = "") {
+  const stats = course.stats;
+  const prefix = fileLabel ? `${fileLabel} ` : "";
+
+  return [
+    metric(`${prefix}Students`, stats.count),
+    course.sectionCount ? metric(`${prefix}Sections`, course.sectionCount) : null,
+    metric(`${prefix}Average`, formatGrade(stats.average)),
+    metric(`${prefix}Median`, formatGrade(stats.median)),
+    metric(`${prefix}IQR`, formatGrade(stats.iqr)),
+    metric(`${prefix}Std. dev.`, formatGrade(stats.stdDev)),
+    metric(`${prefix}Pass count`, stats.passCount),
+    metric(`${prefix}Pass rate`, formatPercent(stats.passRate)),
+    metric(`${prefix}Under 50% count`, stats.riskCount),
+    metric(`${prefix}Under 50% rate`, formatPercent(stats.riskRate)),
+    metric(`${prefix}80%+ count`, stats.distinctionCount),
+    metric(`${prefix}80%+ rate`, formatPercent(stats.distinctionRate)),
+    metric(`${prefix}Range`, formatRange(stats.min, stats.max)),
+  ].filter((item) => item);
 }
 
 function section(title, body) {
