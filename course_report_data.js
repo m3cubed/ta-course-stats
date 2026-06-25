@@ -8,7 +8,8 @@ function normalizeCourses(raw) {
 
   return entries
     .map(([name, value], index) => {
-      const grades = extractGrades(value);
+      const sections = extractSections(value);
+      const grades = sections.flatMap((sectionItem) => sectionItem.grades);
       const sectionIds = extractSectionIds(value);
       const label = String(name || `Course ${index + 1}`).trim();
       const baseId = slugify(label || `course-${index + 1}`);
@@ -19,8 +20,10 @@ function normalizeCourses(raw) {
         id: idCount ? `${baseId}-${idCount + 1}` : baseId,
         name: label || `Course ${index + 1}`,
         grades,
-        sectionCount: sectionIds.length,
+        sections,
+        sectionCount: sectionCountForCourse(sectionIds, sections),
         stats: computeStats(grades),
+        teachers: uniqueTeacherNames(sections),
       };
     })
     .filter((course) => course.grades.length > 0);
@@ -34,6 +37,62 @@ function courseNameFromValue(value, index) {
   }
 
   return `Course ${index + 1}`;
+}
+
+function extractSections(value) {
+  if (Array.isArray(value)) {
+    if (value.every((item) => !item || typeof item !== "object")) {
+      return sectionFromGrades(value);
+    }
+
+    return value.flatMap(extractSections);
+  }
+
+  if (!value || typeof value !== "object") {
+    return sectionFromValue(value);
+  }
+
+  const source = gradeSource(value);
+  if (source.length) {
+    return sectionFromGrades(source, value);
+  }
+
+  const grade = parseGradeValue(value);
+  if (Number.isFinite(grade)) {
+    return sectionFromGrades([grade], value);
+  }
+
+  if (Array.isArray(value.sections)) {
+    return value.sections.flatMap(extractSections);
+  }
+
+  return [];
+}
+
+function sectionFromValue(value) {
+  const grade = parseGradeValue(value);
+  return Number.isFinite(grade)
+    ? [{ teacher: "", sectionId: "", sectionCount: 0, grades: [grade] }]
+    : [];
+}
+
+function sectionFromGrades(values, record = {}) {
+  const grades = values.map(parseGradeValue).filter(Number.isFinite);
+  if (!grades.length) return [];
+
+  return [{
+    teacher: teacherName(record),
+    sectionId: sectionIdentifier(record),
+    sectionCount: sectionCountFromRecord(record),
+    grades,
+  }];
+}
+
+function gradeSource(value) {
+  if (Array.isArray(value.grades)) return value.grades;
+  if (Array.isArray(value.students)) return value.students;
+  if (Array.isArray(value.marks)) return value.marks;
+  return [];
 }
 
 function extractGrades(value) {
@@ -61,7 +120,85 @@ function extractGrades(value) {
         ? value.marks
         : [];
 
-  return source.map(parseGradeValue).filter(Number.isFinite);
+  if (source.length) {
+    return source.map(parseGradeValue).filter(Number.isFinite);
+  }
+
+  const grade = parseGradeValue(value);
+  return Number.isFinite(grade) ? [grade] : [];
+}
+
+function teacherName(value) {
+  if (!value || typeof value !== "object") return "";
+
+  for (const field of [
+    "teacher",
+    "teacherName",
+    "teacher_name",
+    "instructor",
+    "instructorName",
+    "staff",
+    "educator",
+  ]) {
+    const name = value[field];
+    if (typeof name === "string" || typeof name === "number") {
+      return String(name).trim();
+    }
+  }
+
+  return "";
+}
+
+function sectionIdentifier(value) {
+  if (!value || typeof value !== "object") return "";
+
+  for (const field of [
+    "courseIds",
+    "courseId",
+    "sectionIds",
+    "sectionId",
+    "id",
+  ]) {
+    const id = value[field];
+    if (Array.isArray(id)) return id.map(String).filter(Boolean).join(", ");
+    if (typeof id === "string" || typeof id === "number") return String(id);
+  }
+
+  return "";
+}
+
+function sectionCountFromRecord(value) {
+  if (!value || typeof value !== "object") return 0;
+
+  for (const field of [
+    "courseIds",
+    "courseId",
+    "sectionIds",
+    "sectionId",
+    "id",
+  ]) {
+    const id = value[field];
+    if (Array.isArray(id)) return id.filter(Boolean).length;
+    if (typeof id === "string" || typeof id === "number") return 1;
+  }
+
+  return teacherName(value) ? 1 : 0;
+}
+
+function sectionCountForCourse(sectionIds, sections) {
+  if (sectionIds.length) return sectionIds.length;
+  return sections.reduce(
+    (total, sectionItem) => total + (sectionItem.sectionCount || 0),
+    0,
+  );
+}
+
+function uniqueTeacherNames(sections) {
+  return Array.from(new Set(
+    sections
+      .map((sectionItem) => sectionItem.teacher)
+      .filter(Boolean),
+  )).sort((first, second) => first.localeCompare(second));
 }
 
 function extractSectionIds(value) {
@@ -203,17 +340,17 @@ function percentile(sortedValues, p) {
 
 function makeBands(values) {
   const bands = [
-    { label: "< 50%", min: -Infinity, max: 49.999, count: 0 },
-    { label: "50 - 59%", min: 50, max: 59.999, count: 0 },
-    { label: "60 - 69%", min: 60, max: 69.999, count: 0 },
-    { label: "70 - 79%", min: 70, max: 79.999, count: 0 },
-    { label: "80 - 89%", min: 80, max: 89.999, count: 0 },
-    { label: "90 - 99%", min: 90, max: 99.499, count: 0 },
-    { label: "100%", min: 99.5, max: Infinity, count: 0 },
+    { label: "< 50%", min: -Infinity, max: 50, count: 0 },
+    { label: "50 - 59%", min: 50, max: 60, count: 0 },
+    { label: "60 - 69%", min: 60, max: 70, count: 0 },
+    { label: "70 - 79%", min: 70, max: 80, count: 0 },
+    { label: "80 - 89%", min: 80, max: 90, count: 0 },
+    { label: "90 - 99%", min: 90, max: 100, count: 0 },
+    { label: "100%+", min: 100, max: Infinity, count: 0 },
   ];
 
   for (const value of values) {
-    const band = bands.find((item) => value >= item.min && value <= item.max);
+    const band = bands.find((item) => value >= item.min && value < item.max);
     if (band) band.count += 1;
   }
 
@@ -235,11 +372,11 @@ function getCourseIdFromHash() {
 function resolveCourseRoute(courseId) {
   if (isCompareOnlyRouteId(courseId)) {
     const compareId = courseId.slice(COMPARE_ONLY_ROUTE_PREFIX.length);
-    const course = state.compareCourses.find((item) => item.id === compareId);
+    const course = activeCompareCourses().find((item) => item.id === compareId);
     return course ? { course, source: "compare" } : null;
   }
 
-  const course = state.courses.find((item) => item.id === courseId);
+  const course = activeBaseCourses().find((item) => item.id === courseId);
   return course ? { course, source: "base" } : null;
 }
 
@@ -252,13 +389,13 @@ function isCompareOnlyRouteId(courseId) {
 }
 
 function courseIndex(course) {
-  const index = state.courses.findIndex((item) => item.id === course.id);
+  const index = activeBaseCourses().findIndex((item) => item.id === course.id);
   return String(index + 1).padStart(2, "0");
 }
 
 function courseMarker(course, source) {
   if (source === "compare") {
-    const index = state.compareCourses.findIndex(
+    const index = activeCompareCourses().findIndex(
       (item) => item.id === course.id,
     );
     return `C${String(index + 1).padStart(2, "0")}`;
@@ -268,11 +405,11 @@ function courseMarker(course, source) {
 }
 
 function totalStudents() {
-  return state.courses.reduce((total, course) => total + course.stats.count, 0);
+  return activeBaseCourses().reduce((total, course) => total + course.stats.count, 0);
 }
 
 function totalSections() {
-  return state.courses.reduce(
+  return activeBaseCourses().reduce(
     (total, course) => total + course.sectionCount,
     0,
   );
@@ -291,7 +428,7 @@ function overviewNavMetaText(comparison) {
 
 function overviewNavStatText(comparison) {
   const aggregate = aggregateCourseSet(
-    comparison ? combinedOverviewCourses() : state.courses,
+    comparison ? combinedOverviewCourses() : activeBaseCourses(),
   );
   if (!comparison) return formatGradePercent(aggregate.stats.average);
   return formatGradePercent(aggregate.stats.average);
@@ -299,12 +436,16 @@ function overviewNavStatText(comparison) {
 
 function overviewSubtitle(courses, aggregate, sectionTotal) {
   const meta = `${courses.length} courses / ${aggregate.count} students${sectionTotal ? ` / ${sectionTotal} sections` : ""}`;
-  if (!hasComparison()) return `${meta} in ${fileLabelForSource("base")}`;
-  return `${meta} combined from ${fileLabelForSource("base")} and ${fileLabelForSource("compare")}`;
+  const teacher = selectedTeacher();
+  const teacherText = teacher ? ` for ${teacher}` : "";
+  if (!hasComparison()) return `${meta} in ${fileLabelForSource("base")}${teacherText}`;
+  return `${meta} combined from ${fileLabelForSource("base")} and ${fileLabelForSource("compare")}${teacherText}`;
 }
 
 function comparisonOverviewSubtitle(summary) {
-  return `${fileLabelForSource("base")}: ${fileSetMetaText(summary.base)} / ${fileLabelForSource("compare")}: ${fileSetMetaText(summary.next)}`;
+  const teacher = selectedTeacher();
+  const teacherText = teacher ? ` / Teacher: ${teacher}` : "";
+  return `${fileLabelForSource("base")}: ${fileSetMetaText(summary.base)} / ${fileLabelForSource("compare")}: ${fileSetMetaText(summary.next)}${teacherText}`;
 }
 
 function fileSetMetaText(aggregate) {
@@ -316,10 +457,12 @@ function courseMetaText(course) {
 }
 
 function coursePageSubtitle(course, source, compareCourse) {
-  if (!hasComparison()) return courseMetaText(course);
+  const teacher = selectedTeacher();
+  const teacherText = teacher ? ` / ${teacher}` : "";
+  if (!hasComparison()) return `${courseMetaText(course)}${teacherText}`;
   if (compareCourse)
-    return `${courseMetaText(course)} / matched with ${fileLabelForSource("compare")}`;
-  return `${courseMetaText(course)} / only in ${fileNameForSource(source)}`;
+    return `${courseMetaText(course)} / matched with ${fileLabelForSource("compare")}${teacherText}`;
+  return `${courseMetaText(course)} / only in ${fileNameForSource(source)}${teacherText}`;
 }
 
 function courseNavMetaText(course, compareCourse, source = "base") {
@@ -345,22 +488,22 @@ function hasComparison() {
 }
 
 function findCompareCourse(courseName) {
-  return state.compareCourses.find((course) => course.name === courseName);
+  return activeCompareCourses().find((course) => course.name === courseName);
 }
 
 function compareOnlyCourses() {
-  const baseNames = new Set(state.courses.map((course) => course.name));
-  return state.compareCourses.filter((course) => !baseNames.has(course.name));
+  const baseNames = new Set(activeBaseCourses().map((course) => course.name));
+  return activeCompareCourses().filter((course) => !baseNames.has(course.name));
 }
 
 function combinedOverviewCourses() {
   const byName = new Map();
 
-  for (const course of state.courses) {
+  for (const course of activeBaseCourses()) {
     addCombinedCourse(byName, course, "base");
   }
 
-  for (const course of state.compareCourses) {
+  for (const course of activeCompareCourses()) {
     addCombinedCourse(byName, course, "compare");
   }
 
@@ -411,16 +554,16 @@ function aggregateCourseSet(courses) {
 
 function comparisonPairs() {
   const compareByName = new Map(
-    state.compareCourses.map((course) => [course.name, course]),
+    activeCompareCourses().map((course) => [course.name, course]),
   );
   const used = new Set();
-  const pairs = state.courses.map((base) => {
+  const pairs = activeBaseCourses().map((base) => {
     const next = compareByName.get(base.name) || null;
     if (next) used.add(base.name);
     return { name: base.name, base, next };
   });
 
-  for (const next of state.compareCourses) {
+  for (const next of activeCompareCourses()) {
     if (!used.has(next.name)) {
       pairs.push({ name: next.name, base: null, next });
     }
@@ -435,8 +578,8 @@ function coursePairHref(pair) {
 }
 
 function comparisonSummary() {
-  const base = aggregateCourseSet(state.courses);
-  const next = aggregateCourseSet(state.compareCourses);
+  const base = aggregateCourseSet(activeBaseCourses());
+  const next = aggregateCourseSet(activeCompareCourses());
   const matchedCount = comparisonPairs().filter(
     (pair) => pair.base && pair.next,
   ).length;
@@ -477,4 +620,58 @@ function fileLabelForSource(source) {
   }
 
   return state.fileLabel || defaultFileLabel(state.fileName, "First file");
+}
+
+function activeBaseCourses() {
+  return activeCoursesForSource("base");
+}
+
+function activeCompareCourses() {
+  return activeCoursesForSource("compare");
+}
+
+function activeCoursesForSource(source) {
+  const courses = source === "compare" ? state.compareCourses : state.courses;
+  const teacher = selectedTeacher();
+  if (!teacher) return courses;
+
+  return courses
+    .map((course) => courseForTeacher(course, teacher))
+    .filter((course) => course.grades.length > 0);
+}
+
+function courseForTeacher(course, teacher) {
+  const sections = (course.sections || []).filter(
+    (sectionItem) => sectionItem.teacher === teacher,
+  );
+  const grades = sections.flatMap((sectionItem) => sectionItem.grades);
+
+  return {
+    ...course,
+    grades,
+    sections,
+    sectionCount: sections.reduce(
+      (total, sectionItem) => total + (sectionItem.sectionCount || 0),
+      0,
+    ),
+    stats: computeStats(grades),
+    teachers: teacher ? [teacher] : course.teachers,
+  };
+}
+
+function selectedTeacher() {
+  if (!teacherFilterEnabled()) return "";
+  return state.teacherFilter || "";
+}
+
+function teacherFilterEnabled() {
+  return Boolean(teacherFilterSelect);
+}
+
+function availableTeachers() {
+  if (!teacherFilterEnabled()) return [];
+  return Array.from(new Set([
+    ...state.courses.flatMap((course) => course.teachers || []),
+    ...state.compareCourses.flatMap((course) => course.teachers || []),
+  ])).sort((first, second) => first.localeCompare(second));
 }

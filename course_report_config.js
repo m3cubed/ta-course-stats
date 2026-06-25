@@ -14,6 +14,7 @@ const state = {
   compareFileLabel: "",
   compareCourses: [],
   compareRaw: null,
+  teacherFilter: "",
 };
 
 const app = document.getElementById("app");
@@ -25,6 +26,7 @@ const courseNav = document.getElementById("courseNav");
 const labelControls = document.getElementById("labelControls");
 const fileLabelInput = document.getElementById("fileLabelInput");
 const compareFileLabelInput = document.getElementById("compareFileLabelInput");
+const teacherFilterSelect = document.getElementById("teacherFilterSelect");
 const dropOverlay = document.getElementById("dropOverlay");
 const dropTitle = document.getElementById("dropTitle");
 let dragDepth = 0;

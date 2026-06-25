@@ -269,6 +269,14 @@ body.has-comparison .compare-label-field {
   display: grid;
 }
 
+.teacher-filter-field {
+  display: none;
+}
+
+body.has-data .teacher-filter-field {
+  display: grid;
+}
+
 .label-field span {
   color: var(--muted);
   font-size: 0.72rem;
@@ -278,7 +286,8 @@ body.has-comparison .compare-label-field {
   white-space: nowrap;
 }
 
-.label-field input {
+.label-field input,
+.label-field select {
   background: var(--surface);
   border: 1px solid var(--rule-soft);
   border-radius: 2px;
@@ -290,9 +299,23 @@ body.has-comparison .compare-label-field {
   padding: 8px 10px;
 }
 
-.label-field input:focus {
+.label-field select {
+  cursor: pointer;
+}
+
+.label-field select:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.label-field input:focus,
+.label-field select:focus {
   border-color: var(--accent);
   outline: 0;
+}
+
+.by-teacher-page .label-controls {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .layout {
@@ -1229,6 +1252,10 @@ body.drag-active .drop-overlay {
   }
 
   .label-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .by-teacher-page .label-controls {
     grid-template-columns: 1fr;
   }
 

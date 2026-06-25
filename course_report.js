@@ -9,6 +9,9 @@ if (fileLabelInput) {
 if (compareFileLabelInput) {
   compareFileLabelInput.addEventListener("input", handleCompareFileLabelChange);
 }
+if (teacherFilterSelect) {
+  teacherFilterSelect.addEventListener("change", handleTeacherFilterChange);
+}
 document.addEventListener("dragenter", handleDragEnter);
 document.addEventListener("dragover", handleDragOver);
 document.addEventListener("dragleave", handleDragLeave);
@@ -47,6 +50,18 @@ function handleFileLabelChange(event) {
 function handleCompareFileLabelChange(event) {
   state.compareFileLabel = event.target.value.trim();
   saveStoredData();
+  render();
+}
+
+function handleTeacherFilterChange(event) {
+  state.teacherFilter = event.target.value;
+  saveStoredData();
+
+  if (getCourseIdFromHash()) {
+    window.location.hash = "#/";
+    return;
+  }
+
   render();
 }
 
@@ -214,6 +229,7 @@ function saveStoredData() {
       compareFileName: state.compareFileName,
       compareFileLabel: state.compareFileLabel,
       compareRaw: state.compareRaw,
+      teacherFilter: state.teacherFilter,
     }));
   } catch (error) {
     // The report still works without session storage; course routes just reset on reload.
@@ -234,6 +250,7 @@ function loadStoredData() {
       : (stored.compareFileName ? defaultFileLabel(stored.compareFileName, "Second file") : "");
     state.compareRaw = stored.compareRaw || null;
     state.compareCourses = stored.compareRaw ? normalizeCourses(stored.compareRaw) : [];
+    state.teacherFilter = typeof stored.teacherFilter === "string" ? stored.teacherFilter : "";
   } catch (error) {
     clearData();
   }
@@ -244,6 +261,7 @@ function clearData() {
   state.fileLabel = "";
   state.raw = null;
   state.courses = [];
+  state.teacherFilter = "";
   clearCompareData();
   try {
     sessionStorage.removeItem(STORAGE_KEY);

@@ -56,6 +56,24 @@ function renderLabelControls() {
       compareFileLabelInput.value = state.compareFileLabel || "";
     }
   }
+
+  renderTeacherControls();
+}
+
+function renderTeacherControls() {
+  if (!teacherFilterSelect) return;
+
+  const teachers = availableTeachers();
+  const selected = teachers.includes(state.teacherFilter) ? state.teacherFilter : "";
+  state.teacherFilter = selected;
+  teacherFilterSelect.disabled = !teachers.length;
+  teacherFilterSelect.replaceChildren(
+    el("option", { value: "", text: teachers.length ? "All teachers" : "No teacher data" }),
+    ...teachers.map((teacher) => (
+      el("option", { value: teacher, text: teacher })
+    )),
+  );
+  teacherFilterSelect.value = selected;
 }
 
 function renderCourseNav() {
@@ -107,7 +125,7 @@ function renderCourseNav() {
     courseNav.append(link);
   }
 
-  for (const [index, course] of state.courses.entries()) {
+  for (const [index, course] of activeBaseCourses().entries()) {
     const compareCourse = findCompareCourse(course.name);
     const link = el("a", {
       className: course.id === currentId ? "course-link active" : "course-link",
@@ -202,7 +220,7 @@ function renderMessage(title, message) {
 }
 
 function renderOverview() {
-  const courses = hasComparison() ? combinedOverviewCourses() : state.courses;
+  const courses = hasComparison() ? combinedOverviewCourses() : activeBaseCourses();
   const aggregate = computeStats(courses.flatMap((course) => course.grades));
   const sectionTotal = courses.reduce((total, course) => total + course.sectionCount, 0);
   const metrics = [
@@ -236,6 +254,10 @@ function renderOverview() {
         grades: courses.flatMap((course) => course.grades),
         stats: aggregate,
       })),
+      section("90-100 Distribution", renderTopMarkDistributionChart({
+        name: "All courses",
+        grades: courses.flatMap((course) => course.grades),
+      })),
     ]),
   );
 }
@@ -256,14 +278,27 @@ function renderComparisonOverview() {
         firstLabel,
         renderDistributionChart({
           name: firstLabel,
-          grades: state.courses.flatMap((course) => course.grades),
+          grades: activeBaseCourses().flatMap((course) => course.grades),
           stats: summary.base.stats,
         }),
         secondLabel,
         renderDistributionChart({
           name: secondLabel,
-          grades: state.compareCourses.flatMap((course) => course.grades),
+          grades: activeCompareCourses().flatMap((course) => course.grades),
           stats: summary.next.stats,
+        }),
+      ),
+      pairedSection(
+        "90-100 Distributions",
+        firstLabel,
+        renderTopMarkDistributionChart({
+          name: firstLabel,
+          grades: activeBaseCourses().flatMap((course) => course.grades),
+        }),
+        secondLabel,
+        renderTopMarkDistributionChart({
+          name: secondLabel,
+          grades: activeCompareCourses().flatMap((course) => course.grades),
         }),
       ),
       pairedSection(
@@ -280,9 +315,9 @@ function renderComparisonOverview() {
       pairedSection(
         "Grades",
         firstLabel,
-        renderGradeStrip(state.courses.flatMap((course) => course.grades)),
+        renderGradeStrip(activeBaseCourses().flatMap((course) => course.grades)),
         secondLabel,
-        renderGradeStrip(state.compareCourses.flatMap((course) => course.grades)),
+        renderGradeStrip(activeCompareCourses().flatMap((course) => course.grades)),
       ),
     ]),
   );
@@ -320,6 +355,15 @@ function renderCourse(course, source = "base") {
           renderDistributionChart(compareCourse),
         )
         : section(distributionTitle, renderDistributionChart(course)),
+      compareCourse
+        ? pairedSection(
+          "90-100 Distributions",
+          firstLabel,
+          renderTopMarkDistributionChart(course),
+          secondLabel,
+          renderTopMarkDistributionChart(compareCourse),
+        )
+        : section("90-100 Distribution", renderTopMarkDistributionChart(course)),
       compareCourse
         ? pairedSection(
           "Grade Bands",
@@ -796,7 +840,7 @@ function renderPercentileComparison(baseStats, nextStats) {
   ]);
 }
 
-function renderInsights(sourceCourses = state.courses) {
+function renderInsights(sourceCourses = activeBaseCourses()) {
   const courses = sourceCourses.filter((course) => course.stats.count > 0);
 
   if (!courses.length) {
@@ -838,12 +882,28 @@ function tableMeterCell(value, formatter, scale, tone) {
   ]);
 }
 
-function renderDistributionChart(course) {
+function renderTopMarkDistributionChart(course) {
+  const grades = course.grades.filter((grade) => grade >= 90 && grade <= 100);
+
+  return renderDistributionChart({
+    name: course.name,
+    grades,
+    stats: computeStats(grades),
+  }, {
+    domainMin: 90,
+    domainMax: 100,
+    binCount: 10,
+    tickStep: 2,
+    emptyMessage: "No marks between 90% and 100% were found.",
+  });
+}
+
+function renderDistributionChart(course, options = {}) {
   const stats = course.stats;
   const values = course.grades.filter(Number.isFinite);
 
   if (!values.length) {
-    return el("p", { className: "page-subtitle", text: "No grades were found for this course." });
+    return el("p", { className: "page-subtitle", text: options.emptyMessage || "No grades were found for this course." });
   }
 
   const width = 960;
@@ -852,12 +912,13 @@ function renderDistributionChart(course) {
   const yAxisTitleX = 24;
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const minGrade = Math.min(0, Math.floor(Math.min(...values) / 10) * 10);
-  const maxGrade = Math.max(100, Math.ceil(Math.max(...values) / 10) * 10);
+  const minGrade = options.domainMin ?? Math.min(0, Math.floor(Math.min(...values) / 10) * 10);
+  const maxGrade = options.domainMax ?? Math.max(100, Math.ceil(Math.max(...values) / 10) * 10);
   const domainMin = minGrade;
   const domainMax = maxGrade === minGrade ? minGrade + 10 : maxGrade;
-  const binCount = Math.max(5, Math.ceil((domainMax - domainMin) / 10));
+  const binCount = options.binCount ?? Math.max(5, Math.ceil((domainMax - domainMin) / 10));
   const binWidth = (domainMax - domainMin) / binCount;
+  const tickStep = options.tickStep ?? 20;
   const bins = Array.from({ length: binCount }, (_, index) => ({
     min: domainMin + index * binWidth,
     max: domainMin + (index + 1) * binWidth,
@@ -945,7 +1006,7 @@ function renderDistributionChart(course) {
     }));
   }
 
-  for (let tick = domainMin; tick <= domainMax; tick += 20) {
+  for (let tick = domainMin; tick <= domainMax; tick += tickStep) {
     children.push(svg("text", {
       class: "chart-label",
       x: x(tick),

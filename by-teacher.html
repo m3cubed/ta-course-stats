@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Course Grade Report by Teacher</title>
+    <link rel="stylesheet" href="course_report.css" />
+  </head>
+  <body class="by-teacher-page">
+    <header class="topbar">
+      <a class="brand" href="#/">
+        <span class="folio">T</span>
+        <span class="brand-copy">
+          <span class="brand-title">Course Grade Report</span>
+          <span class="brand-subtitle">By teacher</span>
+        </span>
+      </a>
+      <div class="file-controls">
+        <span id="fileStatus" class="file-status">No file loaded</span>
+        <button id="clearButton" class="clear-button" type="button">
+          Clear file(s)
+        </button>
+        <label class="compare-button">
+          <input
+            id="compareFileInput"
+            type="file"
+            accept=".json,application/json"
+          />
+          Compare JSON
+        </label>
+        <label class="file-button">
+          <input id="fileInput" type="file" accept=".json,application/json" />
+          Choose JSON
+        </label>
+      </div>
+      <div id="labelControls" class="label-controls" aria-label="File labels and teacher filter">
+        <label class="label-field">
+          <span>First file label</span>
+          <input
+            id="fileLabelInput"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+        <label class="label-field compare-label-field">
+          <span>Second file label</span>
+          <input
+            id="compareFileLabelInput"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+        <label class="label-field teacher-filter-field">
+          <span>Teacher</span>
+          <select id="teacherFilterSelect">
+            <option value="">All teachers</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="Courses">
+        <div class="sidebar-heading">Courses</div>
+        <nav id="courseNav" class="course-nav"></nav>
+      </aside>
+      <section id="app" class="content" aria-live="polite"></section>
+    </main>
+
+    <div id="dropOverlay" class="drop-overlay" aria-hidden="true">
+      <div class="drop-panel">
+        <span class="drop-marker">JSON</span>
+        <span id="dropTitle">Drop JSON</span>
+      </div>
+    </div>
+
+    <script src="course_report_config.js" defer></script>
+    <script src="course_report_utils.js" defer></script>
+    <script src="course_report_data.js" defer></script>
+    <script src="course_report_render.js" defer></script>
+    <script src="course_report.js" defer></script>
+  </body>
+</html>
